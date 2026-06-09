@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { searchStocks } from "@/lib/stocks";
-import { formatUSD } from "@/lib/visualize";
+import { formatMoney } from "@/lib/visualize";
 
 type EnrichedHolding = {
   id: string;
@@ -99,7 +99,7 @@ export default function HoldingsPanel({
           <input
             value={cost}
             onChange={(e) => setCost(e.target.value)}
-            placeholder="Cost/share"
+            placeholder="Cost/share (£)"
             type="number"
             step="any"
             min="0"
@@ -127,7 +127,7 @@ export default function HoldingsPanel({
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{h.name}</p>
                   <p className="text-xs text-slate-500">
-                    {h.shares} sh · {formatUSD(h.price)}
+                    {h.shares} sh · {formatMoney(h.price)}
                     {h.dayChangePct != null && (
                       <span
                         className={
@@ -144,7 +144,7 @@ export default function HoldingsPanel({
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold">{formatUSD(h.value)}</p>
+                  <p className="font-semibold">{formatMoney(h.value)}</p>
                   {h.gainPct != null && (
                     <p
                       className={`text-xs ${

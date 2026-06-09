@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
-import { COUNTRIES } from "@/lib/wealth";
-
-const VALID_COUNTRIES = new Set(COUNTRIES.map((c) => c.code));
 
 export async function PATCH(req: Request) {
   const userId = await getCurrentUserId();
@@ -11,14 +8,14 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { birthYear?: number | null; country?: string };
+  let body: { birthYear?: number | null };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const data: { birthYear?: number | null; country?: string } = {};
+  const data: { birthYear?: number | null } = {};
 
   if (body.birthYear !== undefined) {
     if (body.birthYear === null) {
@@ -36,17 +33,10 @@ export async function PATCH(req: Request) {
     }
   }
 
-  if (body.country !== undefined) {
-    if (!VALID_COUNTRIES.has(body.country as never)) {
-      return NextResponse.json({ error: "Unsupported country" }, { status: 400 });
-    }
-    data.country = body.country;
-  }
-
   const user = await prisma.user.update({
     where: { id: userId },
     data,
-    select: { birthYear: true, country: true },
+    select: { birthYear: true },
   });
   return NextResponse.json({ user });
 }

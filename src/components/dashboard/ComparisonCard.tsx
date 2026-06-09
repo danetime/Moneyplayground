@@ -1,5 +1,5 @@
-import { formatUSD } from "@/lib/visualize";
-import { COUNTRIES, type Comparison, type CountryCode } from "@/lib/wealth";
+import { formatMoney } from "@/lib/visualize";
+import { type Comparison } from "@/lib/wealth";
 import ProfileForm from "./ProfileForm";
 
 function PercentileGauge({ percentile }: { percentile: number }) {
@@ -23,16 +23,12 @@ function PercentileGauge({ percentile }: { percentile: number }) {
 export default function ComparisonCard({
   comparison,
   birthYear,
-  country,
   totalValue,
 }: {
   comparison: Comparison | null;
   birthYear: number | null;
-  country: CountryCode;
   totalValue: number;
 }) {
-  const countryMeta = COUNTRIES.find((c) => c.code === country);
-
   return (
     <section className="card animate-fade-up">
       <h2 className="text-lg font-bold">📊 How rich are you?</h2>
@@ -40,8 +36,7 @@ export default function ComparisonCard({
       {comparison ? (
         <>
           <p className="mt-1 text-sm text-slate-400">
-            vs {countryMeta?.flag} {comparison.countryName}, ages{" "}
-            {comparison.ageBracket}
+            vs 🇬🇧 the UK, ages {comparison.ageBracket}
           </p>
 
           <div className="mt-5 text-center">
@@ -65,7 +60,7 @@ export default function ComparisonCard({
                 ? `${comparison.multipleOfMedian.toFixed(1)}×`
                 : `${(comparison.multipleOfMedian * 100).toFixed(0)}% of`}
             </span>{" "}
-            the median ({formatUSD(comparison.median, { compact: true })}).
+            the median ({formatMoney(comparison.median, { compact: true })}).
           </p>
 
           <div className="mt-5 space-y-2">
@@ -84,7 +79,7 @@ export default function ComparisonCard({
                     </span>
                   </span>
                   <span className="font-semibold text-slate-300">
-                    {formatUSD(tier.value, { compact: true })}
+                    {formatMoney(tier.value, { compact: true })}
                   </span>
                 </div>
               );
@@ -93,14 +88,14 @@ export default function ComparisonCard({
         </>
       ) : (
         <p className="mt-2 text-sm text-slate-400">
-          Tell us your birth year and country to see where you rank against your
-          age group — locally and worldwide.
+          Tell us your birth year to see where you rank against your age group
+          across the UK.
         </p>
       )}
 
       <div className="mt-6 border-t border-white/10 pt-5">
         <p className="label">Your details</p>
-        <ProfileForm birthYear={birthYear} country={country} />
+        <ProfileForm birthYear={birthYear} />
       </div>
     </section>
   );

@@ -1,12 +1,17 @@
-// Turn a dollar amount into fun, tangible comparisons:
+// Turn a pound amount into fun, tangible comparisons:
 // piles of gold, diamonds, and cars you could buy.
+//
+// All values here are in GBP, matching the rest of the app. Money formatting
+// lives in ./currency (formatGBP), re-exported below for convenience.
 
-// --- Reference prices (approximate, for fun) ---
-const GOLD_PRICE_PER_OZ = 3_300; // USD per troy ounce
+export { formatGBP, formatGBP as formatMoney } from "./currency";
+
+// --- Reference prices (approximate, in GBP, for fun) ---
+const GOLD_PRICE_PER_OZ = 2_600; // £ per troy ounce
 const OZ_PER_KG = 32.1507;
 const GOOD_DELIVERY_BAR_OZ = 400; // standard 400 oz gold bar (~12.4 kg)
 
-const DIAMOND_PRICE_PER_CARAT = 5_000; // a decent 1-carat stone
+const DIAMOND_PRICE_PER_CARAT = 4_000; // a decent 1-carat stone
 
 export type GoldView = {
   ounces: number;
@@ -36,7 +41,7 @@ export function toDiamonds(value: number): DiamondView {
   return { carats, stones: carats };
 }
 
-// --- Cars ---
+// --- Cars (approximate UK on-the-road prices, in GBP) ---
 export type Car = {
   name: string;
   price: number;
@@ -45,17 +50,17 @@ export type Car = {
 
 // Ordered cheapest → priciest.
 export const CARS: Car[] = [
-  { name: "Used Toyota Corolla", price: 18_000, emoji: "🚗" },
-  { name: "New Honda Civic", price: 28_000, emoji: "🚙" },
-  { name: "Tesla Model 3", price: 42_000, emoji: "⚡" },
-  { name: "BMW M3", price: 76_000, emoji: "🏎️" },
-  { name: "Porsche 911", price: 130_000, emoji: "🏎️" },
-  { name: "Range Rover Autobiography", price: 180_000, emoji: "🚙" },
-  { name: "Lamborghini Huracán", price: 250_000, emoji: "🏎️" },
-  { name: "Ferrari Roma", price: 280_000, emoji: "🏎️" },
-  { name: "Rolls-Royce Ghost", price: 380_000, emoji: "🛻" },
-  { name: "McLaren 750S", price: 330_000, emoji: "🏎️" },
-  { name: "Bugatti Chiron", price: 3_500_000, emoji: "🏁" },
+  { name: "Used Ford Fiesta", price: 9_000, emoji: "🚗" },
+  { name: "New Honda Civic", price: 30_000, emoji: "🚙" },
+  { name: "Tesla Model 3", price: 40_000, emoji: "⚡" },
+  { name: "BMW M3", price: 85_000, emoji: "🏎️" },
+  { name: "Porsche 911", price: 105_000, emoji: "🏎️" },
+  { name: "Range Rover Autobiography", price: 140_000, emoji: "🚙" },
+  { name: "Ferrari Roma", price: 185_000, emoji: "🏎️" },
+  { name: "Lamborghini Huracán", price: 205_000, emoji: "🏎️" },
+  { name: "McLaren 750S", price: 245_000, emoji: "🏎️" },
+  { name: "Rolls-Royce Ghost", price: 290_000, emoji: "🛻" },
+  { name: "Bugatti Chiron", price: 2_500_000, emoji: "🏁" },
 ];
 
 export type CarView = {
@@ -82,25 +87,9 @@ export function toCars(value: number): CarView {
   };
 }
 
-// --- Formatting helpers ---
-export function formatUSD(value: number, opts?: { compact?: boolean }): string {
-  if (opts?.compact && Math.abs(value) >= 1_000_000) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      notation: "compact",
-      maximumFractionDigits: 1,
-    }).format(value);
-  }
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: value < 1000 ? 2 : 0,
-  }).format(value);
-}
-
+// --- Number formatting (non-currency) ---
 export function formatNumber(value: number, maxFractionDigits = 1): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("en-GB", {
     maximumFractionDigits: maxFractionDigits,
   }).format(value);
 }

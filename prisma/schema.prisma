@@ -22,7 +22,7 @@ model User {
 
   // App-specific profile fields used for wealth comparison.
   birthYear     Int?
-  country       String?   @default("US")
+  country       String?   @default("UK")
 
   accounts Account[]
   sessions Session[]

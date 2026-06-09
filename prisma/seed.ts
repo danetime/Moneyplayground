@@ -15,7 +15,7 @@ async function main() {
       email,
       name: "Demo Tycoon",
       birthYear: 1992,
-      country: "US",
+      country: "UK",
     },
   });
 

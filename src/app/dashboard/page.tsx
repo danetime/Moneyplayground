@@ -3,11 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getQuotes } from "@/lib/quotes";
-import {
-  ageToBracket,
-  compareWealth,
-  type CountryCode,
-} from "@/lib/wealth";
+import { ageToBracket, compareWealth } from "@/lib/wealth";
+import { toGbp } from "@/lib/currency";
 import { toGold, toDiamonds, toCars } from "@/lib/visualize";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import PortfolioSummary from "@/components/dashboard/PortfolioSummary";
@@ -25,13 +22,17 @@ export default async function DashboardPage() {
   });
   if (!user) redirect("/login");
 
-  // Price each holding with live quotes (mock fallback when offline).
+  // Price each holding with live quotes (mock fallback when offline), with all
+  // amounts converted from the quote's native currency into GBP for display.
   const quotes = await getQuotes(user.holdings.map((h) => h.symbol));
   const enriched = user.holdings.map((h) => {
     const quote = quotes[h.symbol.toUpperCase()];
-    const price = quote?.price ?? 0;
+    const price = quote ? toGbp(quote.price, quote.currency) : 0;
     const value = price * h.shares;
+    // Cost basis is entered by the user in GBP, so it's already in pounds.
     const cost = h.costBasis != null ? h.costBasis * h.shares : null;
+    const dayChange =
+      quote?.change != null ? toGbp(quote.change, quote.currency) * h.shares : null;
     return {
       id: h.id,
       symbol: h.symbol,
@@ -43,7 +44,7 @@ export default async function DashboardPage() {
       gain: cost != null ? value - cost : null,
       gainPct: cost && cost > 0 ? ((value - cost) / cost) * 100 : null,
       dayChangePct: quote?.changePct ?? null,
-      dayChange: quote?.change != null ? quote.change * h.shares : null,
+      dayChange,
     };
   });
 
@@ -65,13 +66,10 @@ export default async function DashboardPage() {
   const diamonds = toDiamonds(totalValue);
   const cars = toCars(totalValue);
 
-  const country = (user.country as CountryCode) ?? "US";
   const currentYear = new Date().getFullYear();
   const age = user.birthYear ? currentYear - user.birthYear : null;
   const comparison =
-    age != null
-      ? compareWealth(totalValue, ageToBracket(age), country)
-      : null;
+    age != null ? compareWealth(totalValue, ageToBracket(age)) : null;
 
   return (
     <div className="mx-auto max-w-6xl px-6 pb-24">
@@ -102,7 +100,6 @@ export default async function DashboardPage() {
           <ComparisonCard
             comparison={comparison}
             birthYear={user.birthYear}
-            country={country}
             totalValue={totalValue}
           />
         </div>

@@ -1,4 +1,4 @@
-import { formatUSD } from "@/lib/visualize";
+import { formatMoney } from "@/lib/visualize";
 
 export default function PortfolioSummary({
   totalValue,
@@ -44,7 +44,7 @@ export default function PortfolioSummary({
       </div>
       <div className="mt-1 flex flex-wrap items-end gap-3">
         <span className="text-5xl font-black tracking-tight gold-text sm:text-6xl">
-          {formatUSD(totalValue)}
+          {formatMoney(totalValue)}
         </span>
         <div className="mb-2 flex gap-2">
           {dayChange != null && dayChange !== 0 && (
@@ -55,7 +55,7 @@ export default function PortfolioSummary({
                   : "bg-rose-500/15 text-rose-300"
               }`}
             >
-              {dayPositive ? "▲" : "▼"} {formatUSD(Math.abs(dayChange))} today
+              {dayPositive ? "▲" : "▼"} {formatMoney(Math.abs(dayChange))} today
             </span>
           )}
           {totalGain != null && (
@@ -66,7 +66,7 @@ export default function PortfolioSummary({
                   : "bg-rose-500/15 text-rose-300"
               }`}
             >
-              {gainPositive ? "▲" : "▼"} {formatUSD(Math.abs(totalGain))} all time
+              {gainPositive ? "▲" : "▼"} {formatMoney(Math.abs(totalGain))} all time
             </span>
           )}
         </div>

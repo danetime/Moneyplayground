@@ -1,6 +1,6 @@
 import {
   formatNumber,
-  formatUSD,
+  formatMoney,
   type GoldView,
   type DiamondView,
   type CarView,
@@ -74,7 +74,7 @@ export default function WealthVisualizer({
         <div className="card animate-fade-up">
           <div className="flex items-baseline justify-between">
             <h3 className="text-lg font-bold">🪙 Piles of gold</h3>
-            <span className="text-xs text-slate-500">~$3,300/oz</span>
+            <span className="text-xs text-slate-500">~£2,600/oz</span>
           </div>
           <p className="mt-2 text-3xl font-black gold-text">
             {formatNumber(gold.kilograms)} kg
@@ -97,7 +97,7 @@ export default function WealthVisualizer({
         <div className="card animate-fade-up">
           <div className="flex items-baseline justify-between">
             <h3 className="text-lg font-bold">💎 Diamonds</h3>
-            <span className="text-xs text-slate-500">~$5k/carat</span>
+            <span className="text-xs text-slate-500">~£4k/carat</span>
           </div>
           <p className="mt-2 text-3xl font-black text-sky-200">
             {formatNumber(diamonds.carats)} ct
@@ -125,7 +125,7 @@ export default function WealthVisualizer({
                 {cars.best.car.emoji} {cars.best.car.name}
               </p>
               <p className="text-sm text-slate-500">
-                {formatUSD(cars.best.car.price, { compact: true })} each
+                {formatMoney(cars.best.car.price, { compact: true })} each
               </p>
             </div>
             <div className="h-10 w-px bg-white/10" />
