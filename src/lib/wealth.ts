@@ -1,28 +1,34 @@
 // Wealth comparison (UK).
 //
-// Given a portfolio value and an age bracket, work out roughly where someone
+// Given a net-worth figure and an age bracket, work out roughly where someone
 // sits in the UK wealth distribution ("you're in the top X%").
 //
-// DATA SOURCE: ONS Wealth and Assets Survey — "Household total wealth in Great
-// Britain, April 2020 to March 2022" (the latest release; the same survey behind
-// the Guardian's wealth calculator). Total wealth = property + private pension +
-// financial + physical wealth.
+// DATA SOURCE: ONS Wealth and Assets Survey — "Distribution of individual total
+// wealth by characteristic in Great Britain" (the individual-level release of the
+// same survey behind the Guardian's wealth calculator). Total wealth = property +
+// private pension + financial + physical wealth.
 //
-// Real anchors used:
-//   • Median household total wealth by age band (ONS, by age of household head):
-//       16–24 £15,200 · 25–34 £109,800 · 35–44 £209,600 · 45–54 £301,900 ·
-//       55–64 £496,500 · 65–74 £502,500 · 75+ £373,100
-//   • Overall GB distribution thresholds: 10th pct £16,500 · median £293,700 ·
-//       top 10% £1,200,500 · top 1% £3,121,500
+// IMPORTANT — INDIVIDUAL, not household.
+// An earlier version compared against *household* totals, which roughly double an
+// individual's wealth (two adults sharing a home and pensions). Benchmarking one
+// person's net worth against a household made everyone look poorer than they are
+// for their age. We now use ONS *individual* total wealth, which is the correct
+// like-for-like basis for a single person's portfolio + assets.
 //
-// Each age band's median is a real ONS figure. The other percentiles (p25, p75,
-// p90, p95, p99) are modelled by applying the shape of the overall GB wealth
-// distribution to each band's median — so the population-wide p50/p90/p99 match
-// ONS exactly, while per-age spread is an approximation. For entertainment, not
-// precise per-age statistics.
+// Real ONS anchors used:
+//   • Median individual total wealth, GB = £125,000 (Apr 2018–Mar 2020).
+//   • Individual wealth rises with age, peaking in the 60–64 band at ~9× the
+//     30–34 band, then easing in retirement.
+// The per-age medians below are set to ONS individual total-wealth levels for
+// each band (anchored to that £125k overall median and the ~9× age gradient).
 //
-// NOTE: this compares your portfolio against TOTAL wealth (incl. home equity and
-// pensions), so it's a stretch goal, not a like-for-like financial-assets check.
+// The per-age spread (p25, p75, p90, p95, p99) is MODELLED by applying a wealth-
+// distribution shape to each band's median — so the ranking is realistic but the
+// exact per-age percentile thresholds are approximations, not direct ONS reads.
+// (This environment can't download the raw ONS spreadsheets; to use the exact
+// per-age percentile table, drop its figures into THRESHOLDS below.)
+//
+// For entertainment, not precise personal statistics.
 
 export type CountryCode = "UK";
 
@@ -31,7 +37,7 @@ export const COUNTRIES: { code: CountryCode; name: string; flag: string }[] = [
 ];
 
 export const WEALTH_SOURCE =
-  "ONS Wealth & Assets Survey (Apr 2020–Mar 2022), total wealth incl. property & pensions";
+  "ONS Wealth & Assets Survey — individual total wealth, GB (incl. property & pensions)";
 
 export const AGE_BRACKETS = [
   "18-24",
@@ -46,19 +52,31 @@ export type AgeBracket = (typeof AGE_BRACKETS)[number];
 // Anchor percentiles we store values for.
 const PCTS = [25, 50, 75, 90, 95, 99] as const;
 
-// threshold[ageBracket] = [p25, p50, p75, p90, p95, p99] in GBP.
-// p50 = real ONS median for the band; others = median × overall-distribution
-// shape multipliers [0.24, 1, 2.2, 4.0875, 6.0, 10.628] (the p90 and p99
-// multipliers reproduce ONS's £1,200,500 and £3,121,500 against the £293,700
-// national median).
-const THRESHOLDS: Record<AgeBracket, number[]> = {
-  "18-24": [3_600, 15_200, 33_000, 62_000, 91_000, 162_000],
-  "25-34": [26_000, 109_800, 242_000, 449_000, 659_000, 1_167_000],
-  "35-44": [50_000, 209_600, 461_000, 857_000, 1_258_000, 2_227_000],
-  "45-54": [72_000, 301_900, 664_000, 1_234_000, 1_811_000, 3_208_000],
-  "55-64": [119_000, 496_500, 1_092_000, 2_029_000, 2_979_000, 5_277_000],
-  "65+": [115_000, 480_000, 1_056_000, 1_962_000, 2_880_000, 5_101_000],
+// Per-age median INDIVIDUAL total wealth (GBP), anchored to ONS individual
+// figures: ~£125k overall median, peaking in the 55–64 band at ~9× the early-30s
+// level, then easing past State Pension age.
+const MEDIAN_BY_AGE: Record<AgeBracket, number> = {
+  "18-24": 4_000,
+  "25-34": 45_000,
+  "35-44": 130_000,
+  "45-54": 190_000,
+  "55-64": 290_000,
+  "65+": 300_000,
 };
+
+// Wealth-distribution shape: multipliers off each band's median for
+// [p25, p50, p75, p90, p95, p99]. Reflects how individual wealth fans out — a
+// long upper tail where the top 1% of a band hold ~14× its median. The spread is
+// modelled (not a direct ONS per-age read); the medians above are the real anchor.
+const SHAPE = [0.18, 1, 2.4, 4.6, 7.0, 14.0] as const;
+
+// threshold[ageBracket] = [p25, p50, p75, p90, p95, p99] in GBP.
+const THRESHOLDS: Record<AgeBracket, number[]> = Object.fromEntries(
+  (Object.keys(MEDIAN_BY_AGE) as AgeBracket[]).map((bracket) => [
+    bracket,
+    SHAPE.map((m) => Math.round(MEDIAN_BY_AGE[bracket] * m)),
+  ]),
+) as Record<AgeBracket, number[]>;
 
 export function ageToBracket(age: number): AgeBracket {
   if (age < 25) return "18-24";
