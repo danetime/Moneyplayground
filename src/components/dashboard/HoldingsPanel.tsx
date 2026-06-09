@@ -66,7 +66,8 @@ export default function HoldingsPanel({
 
   return (
     <section className="card">
-      <h2 className="text-lg font-bold">Your portfolio</h2>
+      <div className="deed-bar bg-board-deep">Portfolio</div>
+      <h2 className="mono-title text-xl">Your holdings</h2>
 
       <form onSubmit={addHolding} className="mt-4 space-y-3">
         <div className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]">
@@ -109,31 +110,31 @@ export default function HoldingsPanel({
             {busy ? "Adding…" : "Add"}
           </button>
         </div>
-        {error && <p className="text-sm text-rose-300">{error}</p>}
+        {error && <p className="text-sm text-rose-700">{error}</p>}
       </form>
 
       <div className="mt-5">
         {holdings.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-white/10 py-8 text-center text-sm text-slate-500">
+          <p className="rounded-xl border border-dashed border-black/15 py-8 text-center text-sm text-stone-500">
             No holdings yet. Add one above to start your pile.
           </p>
         ) : (
-          <ul className="divide-y divide-white/5">
+          <ul className="divide-y divide-black/10">
             {holdings.map((h) => (
               <li key={h.id} className="flex items-center gap-3 py-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/5 text-xs font-bold">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-black/[0.04] text-xs font-bold">
                   {h.symbol.slice(0, 4)}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{h.name}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-stone-500">
                     {h.shares} sh · {formatMoney(h.price)}
                     {h.dayChangePct != null && (
                       <span
                         className={
                           h.dayChangePct >= 0
-                            ? " text-emerald-400"
-                            : " text-rose-400"
+                            ? " text-emerald-700"
+                            : " text-rose-700"
                         }
                       >
                         {" "}
@@ -148,7 +149,7 @@ export default function HoldingsPanel({
                   {h.gainPct != null && (
                     <p
                       className={`text-xs ${
-                        h.gainPct >= 0 ? "text-emerald-300" : "text-rose-300"
+                        h.gainPct >= 0 ? "text-emerald-700" : "text-rose-700"
                       }`}
                     >
                       {h.gainPct >= 0 ? "▲" : "▼"} {Math.abs(h.gainPct).toFixed(1)}%
@@ -157,7 +158,7 @@ export default function HoldingsPanel({
                 </div>
                 <button
                   onClick={() => remove(h.id)}
-                  className="ml-1 rounded-lg p-2 text-slate-500 transition hover:bg-rose-500/10 hover:text-rose-300"
+                  className="ml-1 rounded-lg p-2 text-stone-500 transition hover:bg-rose-100 hover:text-rose-700"
                   aria-label={`Remove ${h.symbol}`}
                   title="Remove"
                 >

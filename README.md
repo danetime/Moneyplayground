@@ -14,8 +14,9 @@ worldwide.
 - 📈 **Add any stock to your portfolio** with **live market prices** (Yahoo
   Finance by default, Finnhub optional, offline mock fallback)
 - 🪙 **Visualize your wealth** as gold (oz / kg / bars), diamonds (carats), and cars
-- 📊 **Wealth percentile** — see if you're top 25 / 10 / 5 / 1% for your age across the **UK**
+- 📊 **Wealth percentile** — see if you're top 25 / 10 / 5 / 1% for your age across the **UK**, using real **ONS Wealth & Assets Survey** data
 - 💷 **Everything in £ (GBP)** — live prices are converted from their native currency
+- 🎩 **Monopoly board theme** — title-deed cards, property colours and play-money styling
 - 🗄️ **Persistent database** (SQLite for dev, swap to Postgres for production)
 
 ## Tech stack
@@ -104,9 +105,10 @@ new symbols are validated against live data when you add them.
 
 - **Database:** change the Prisma datasource `provider` to `postgresql` and
   point `DATABASE_URL` at your Postgres instance, then `npm run db:push`.
-- **Wealth data:** the UK figures in `src/lib/wealth.ts` are approximations
-  inspired by the ONS Wealth and Assets Survey — swap in a vetted dataset for
-  accuracy.
+- **Wealth data:** `src/lib/wealth.ts` uses real ONS Wealth and Assets Survey
+  medians by age (Apr 2020–Mar 2022); the per-age spread around each median is
+  modelled from the overall GB distribution. It compares against *total* wealth
+  (incl. property & pensions) — adjust if you want a financial-assets-only basis.
 - **FX:** `src/lib/currency.ts` uses a fixed USD→GBP rate — wire up a live FX
   feed if you need precise conversions.
 - Set a strong `NEXTAUTH_SECRET`, configure `NEXTAUTH_URL`, and **disable**

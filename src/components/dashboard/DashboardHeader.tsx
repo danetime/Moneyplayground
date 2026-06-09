@@ -14,22 +14,25 @@ export default function DashboardHeader({
 
   return (
     <header className="flex items-center justify-between py-6">
-      <Link href="/" className="text-lg font-extrabold tracking-tight">
-        💰 Money <span className="gold-text">Playground</span>
+      <Link
+        href="/"
+        className="rounded-md border-[3px] border-monoink bg-monored px-3 py-1.5 text-lg font-black uppercase tracking-tight text-white shadow-deed-sm"
+      >
+        💰 Money Playground
       </Link>
       <div className="flex items-center gap-3">
-        <span className="hidden text-sm text-slate-300 sm:inline">
-          Hey, <span className="font-semibold text-slate-100">{firstName}</span>
+        <span className="hidden text-sm font-semibold text-cream sm:inline">
+          Hey, <span className="font-black text-white">{firstName}</span>
         </span>
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={image}
             alt=""
-            className="h-8 w-8 rounded-full border border-white/15"
+            className="h-9 w-9 rounded-full border-[3px] border-monoink"
           />
         ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gold/20 text-sm font-bold text-gold-light">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-monoink bg-cream text-sm font-black text-monored">
             {firstName.charAt(0).toUpperCase()}
           </div>
         )}

@@ -3,43 +3,92 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
-  @apply bg-ink text-slate-100 antialiased;
+  @apply bg-board-deep text-monoink antialiased;
+  /* The deep green "felt" frame around the cream board. */
   background-image:
-    radial-gradient(60rem 60rem at 110% -10%, rgba(245, 197, 24, 0.12), transparent 60%),
-    radial-gradient(50rem 50rem at -10% 10%, rgba(99, 102, 241, 0.12), transparent 55%);
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.03) 0 12px,
+      rgba(0, 0, 0, 0.03) 12px 24px
+    );
   background-attachment: fixed;
 }
 
 @layer components {
-  .card {
-    @apply rounded-2xl border border-white/10 bg-ink-soft/70 p-6 shadow-xl backdrop-blur;
+  /* The cream "board" the whole app sits on. */
+  .board {
+    @apply mx-auto border-y-4 border-monoink bg-board sm:border-4;
+    background-image: radial-gradient(
+      120% 80% at 50% -10%,
+      rgba(255, 255, 255, 0.5),
+      transparent 60%
+    );
+  }
+
+  /* A Title-Deed style card: cream, hard black border + drop shadow. */
+  .card,
+  .deed {
+    @apply rounded-md border-[3px] border-monoink bg-cream p-6 shadow-deed;
+  }
+
+  /* Monopoly-style heading: bold, condensed, all-caps. */
+  .mono-title {
+    @apply font-black uppercase tracking-tight;
+  }
+
+  /* A coloured property stripe (use with a deed-* bg colour). */
+  .deed-bar {
+    @apply -mx-6 -mt-6 mb-4 flex items-center justify-center border-b-[3px] border-monoink px-6 py-2 text-center text-xs font-black uppercase tracking-widest text-white;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition;
+    @apply inline-flex items-center justify-center gap-2 rounded-md border-[3px] border-monoink px-4 py-2.5 text-sm font-extrabold uppercase tracking-wide transition active:translate-x-0.5 active:translate-y-0.5;
   }
 
+  /* Primary action: Monopoly red. */
   .btn-gold {
-    @apply btn bg-gold text-ink hover:bg-gold-light;
+    @apply btn bg-monored text-white shadow-deed-sm hover:brightness-95;
   }
 
+  /* Secondary action: cream token button. */
   .btn-ghost {
-    @apply btn border border-white/15 text-slate-200 hover:bg-white/5;
+    @apply btn bg-cream text-monoink shadow-deed-sm hover:bg-white;
   }
 
   .input {
-    @apply w-full rounded-xl border border-white/10 bg-black/30 px-3.5 py-2.5 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-gold/60 focus:ring-2 focus:ring-gold/20;
+    @apply w-full rounded-md border-[3px] border-monoink bg-white px-3.5 py-2.5 text-sm font-semibold text-monoink outline-none placeholder:font-normal placeholder:text-stone-400 focus:ring-2 focus:ring-monored/40;
   }
 
   .label {
-    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400;
+    @apply mb-1.5 block text-xs font-black uppercase tracking-widest text-stone-500;
   }
 
+  /* The big money figure, styled like Monopoly money ink. */
   .gold-text {
-    @apply bg-gradient-to-r from-gold-light via-gold to-gold-dark bg-clip-text text-transparent;
+    @apply text-monored;
+  }
+
+  .money-text {
+    @apply text-board-deep;
+  }
+
+  /* A Monopoly banknote panel for the headline portfolio value. */
+  .banknote {
+    @apply rounded-md border-[3px] border-board-deep bg-cream p-6;
+    background-image:
+      radial-gradient(
+        80% 120% at 100% 0%,
+        rgba(30, 107, 69, 0.1),
+        transparent 55%
+      ),
+      radial-gradient(
+        80% 120% at 0% 100%,
+        rgba(30, 107, 69, 0.1),
+        transparent 55%
+      );
   }
 }

@@ -14,7 +14,7 @@ async function main() {
     create: {
       email,
       name: "Demo Tycoon",
-      birthYear: 1992,
+      birthYear: 2002,
       country: "UK",
     },
   });

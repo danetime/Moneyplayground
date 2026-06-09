@@ -1,20 +1,28 @@
 import { formatMoney } from "@/lib/visualize";
-import { type Comparison } from "@/lib/wealth";
+import { type Comparison, WEALTH_SOURCE } from "@/lib/wealth";
 import ProfileForm from "./ProfileForm";
+
+// Property-set colours (Monopoly) for the wealth milestone tiers, cheap → dear.
+const TIER_COLORS: Record<string, string> = {
+  "Top 25%": "bg-deed-orange",
+  "Top 10%": "bg-deed-red",
+  "Top 5%": "bg-deed-green",
+  "Top 1%": "bg-deed-blue",
+};
 
 function PercentileGauge({ percentile }: { percentile: number }) {
   const pct = Math.max(0, Math.min(100, percentile));
   return (
     <div className="mt-3">
-      <div className="relative h-3 w-full overflow-hidden rounded-full bg-white/10">
+      <div className="relative h-4 w-full overflow-hidden rounded-full border-2 border-monoink bg-white">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-gold-dark via-gold to-gold-light"
+          className="h-full bg-board-deep"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="mt-1 flex justify-between text-[10px] uppercase tracking-wide text-slate-500">
-        <span>Poorer</span>
-        <span>Richer</span>
+      <div className="mt-1 flex justify-between text-[10px] font-black uppercase tracking-wide text-stone-500">
+        <span>Skint</span>
+        <span>Rolling in it</span>
       </div>
     </div>
   );
@@ -31,31 +39,32 @@ export default function ComparisonCard({
 }) {
   return (
     <section className="card animate-fade-up">
-      <h2 className="text-lg font-bold">📊 How rich are you?</h2>
+      <div className="deed-bar bg-monored">Title Deed</div>
+      <h2 className="mono-title text-xl">How rich are you?</h2>
 
       {comparison ? (
         <>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm font-semibold text-stone-500">
             vs 🇬🇧 the UK, ages {comparison.ageBracket}
           </p>
 
           <div className="mt-5 text-center">
-            <p className="text-xs uppercase tracking-wide text-slate-400">
+            <p className="text-xs font-black uppercase tracking-widest text-stone-500">
               You&apos;re in the
             </p>
-            <p className="text-4xl font-black gold-text">
+            <p className="mono-title text-5xl text-monored">
               {comparison.topLabel}
             </p>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm font-semibold text-stone-500">
               richer than {comparison.percentile.toFixed(1)}% of your peers
             </p>
           </div>
 
           <PercentileGauge percentile={comparison.percentile} />
 
-          <p className="mt-4 text-center text-sm text-slate-300">
+          <p className="mt-4 text-center text-sm font-semibold text-stone-600">
             That&apos;s{" "}
-            <span className="font-bold text-gold-light">
+            <span className="font-black text-board-deep">
               {comparison.multipleOfMedian >= 1
                 ? `${comparison.multipleOfMedian.toFixed(1)}×`
                 : `${(comparison.multipleOfMedian * 100).toFixed(0)}% of`}
@@ -64,21 +73,24 @@ export default function ComparisonCard({
           </p>
 
           <div className="mt-5 space-y-2">
-            <p className="label">Milestones for your bracket</p>
+            <p className="label">Milestones for your age</p>
             {comparison.tiers.map((tier) => {
               const reached = totalValue >= tier.value;
               return (
                 <div
                   key={tier.label}
-                  className="flex items-center justify-between rounded-lg border border-white/5 bg-black/20 px-3 py-2 text-sm"
+                  className={`flex items-center justify-between rounded-md border-2 border-monoink px-3 py-2 text-sm ${
+                    reached ? "bg-cream" : "bg-white"
+                  }`}
                 >
                   <span className="flex items-center gap-2">
+                    <span
+                      className={`h-3.5 w-3.5 rounded-sm border-2 border-monoink ${TIER_COLORS[tier.label] ?? "bg-stone-300"}`}
+                    />
+                    <span className="font-bold">{tier.label}</span>
                     <span>{reached ? "✅" : "🔒"}</span>
-                    <span className={reached ? "text-slate-200" : "text-slate-400"}>
-                      {tier.label}
-                    </span>
                   </span>
-                  <span className="font-semibold text-slate-300">
+                  <span className="font-black text-stone-700">
                     {formatMoney(tier.value, { compact: true })}
                   </span>
                 </div>
@@ -87,16 +99,20 @@ export default function ComparisonCard({
           </div>
         </>
       ) : (
-        <p className="mt-2 text-sm text-slate-400">
+        <p className="mt-2 text-sm font-semibold text-stone-500">
           Tell us your birth year to see where you rank against your age group
           across the UK.
         </p>
       )}
 
-      <div className="mt-6 border-t border-white/10 pt-5">
+      <div className="mt-6 border-t-2 border-dashed border-black/20 pt-5">
         <p className="label">Your details</p>
         <ProfileForm birthYear={birthYear} />
       </div>
+
+      <p className="mt-4 text-[10px] leading-snug text-stone-400">
+        Source: {WEALTH_SOURCE}.
+      </p>
     </section>
   );
 }

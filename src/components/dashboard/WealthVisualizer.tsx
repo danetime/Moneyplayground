@@ -21,7 +21,7 @@ function IconPile({
   const overflow = whole - shown;
   if (whole < 1) {
     return (
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-stone-500">
         Not quite one yet — keep stacking!
       </p>
     );
@@ -32,7 +32,7 @@ function IconPile({
         <span key={i}>{emoji}</span>
       ))}
       {overflow > 0 && (
-        <span className="self-center pl-2 text-sm font-semibold text-slate-400">
+        <span className="self-center pl-2 text-sm font-semibold text-stone-500">
           +{formatNumber(overflow, 0)} more
         </span>
       )}
@@ -56,7 +56,7 @@ export default function WealthVisualizer({
       <section className="card text-center">
         <div className="text-4xl">🪙</div>
         <h2 className="mt-3 text-lg font-bold">Your treasure awaits</h2>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-stone-500">
           Add a holding and watch your gold, diamonds and supercars appear.
         </p>
       </section>
@@ -65,21 +65,22 @@ export default function WealthVisualizer({
 
   return (
     <section className="space-y-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+      <h2 className="mono-title text-sm tracking-widest text-board-deep">
         What that looks like
       </h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Gold */}
         <div className="card animate-fade-up">
+          <div className="deed-bar bg-deed-yellow !text-monoink">Gold Reserve</div>
           <div className="flex items-baseline justify-between">
-            <h3 className="text-lg font-bold">🪙 Piles of gold</h3>
-            <span className="text-xs text-slate-500">~£2,600/oz</span>
+            <h3 className="mono-title text-lg">🪙 Piles of gold</h3>
+            <span className="text-xs font-bold text-stone-500">~£2,600/oz</span>
           </div>
           <p className="mt-2 text-3xl font-black gold-text">
             {formatNumber(gold.kilograms)} kg
           </p>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-stone-500">
             {formatNumber(gold.ounces)} troy oz ·{" "}
             {gold.tonnes >= 0.01
               ? `${formatNumber(gold.tonnes, 2)} tonnes`
@@ -87,7 +88,7 @@ export default function WealthVisualizer({
           </p>
           <div className="mt-4">
             <IconPile count={Math.max(gold.bars, gold.kilograms)} emoji="🟨" />
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-stone-500">
               Each bar ≈ a 400oz Good Delivery brick.
             </p>
           </div>
@@ -95,14 +96,15 @@ export default function WealthVisualizer({
 
         {/* Diamonds */}
         <div className="card animate-fade-up">
+          <div className="deed-bar bg-deed-blue">Jewel Vault</div>
           <div className="flex items-baseline justify-between">
-            <h3 className="text-lg font-bold">💎 Diamonds</h3>
-            <span className="text-xs text-slate-500">~£4k/carat</span>
+            <h3 className="mono-title text-lg">💎 Diamonds</h3>
+            <span className="text-xs font-bold text-stone-500">~£4k/carat</span>
           </div>
-          <p className="mt-2 text-3xl font-black text-sky-200">
+          <p className="mt-2 text-3xl font-black text-deed-blue">
             {formatNumber(diamonds.carats)} ct
           </p>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-stone-500">
             {formatNumber(diamonds.stones, 0)} one-carat stones
           </p>
           <div className="mt-4">
@@ -113,31 +115,32 @@ export default function WealthVisualizer({
 
       {/* Cars */}
       <div className="card animate-fade-up">
-        <h3 className="text-lg font-bold">🏎️ Cars you could buy</h3>
+        <div className="deed-bar bg-deed-green">Motor Works</div>
+        <h3 className="mono-title text-lg">🏎️ Cars you could buy</h3>
         {cars.best ? (
           <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2">
             <div>
-              <p className="text-sm text-slate-400">Top pick, paid in full</p>
+              <p className="text-sm text-stone-500">Top pick, paid in full</p>
               <p className="text-2xl font-black">
                 {cars.best.count > 1 && (
                   <span className="gold-text">{cars.best.count}× </span>
                 )}
                 {cars.best.car.emoji} {cars.best.car.name}
               </p>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-stone-500">
                 {formatMoney(cars.best.car.price, { compact: true })} each
               </p>
             </div>
-            <div className="h-10 w-px bg-white/10" />
+            <div className="h-10 w-px bg-black/5" />
             <div>
-              <p className="text-sm text-slate-400">Or, in Honda Civics</p>
-              <p className="text-2xl font-black text-slate-100">
+              <p className="text-sm text-stone-500">Or, in Honda Civics</p>
+              <p className="text-2xl font-black text-monoink">
                 {formatNumber(cars.everyman.count, 1)} 🚙
               </p>
             </div>
           </div>
         ) : (
-          <p className="mt-2 text-sm text-slate-400">
+          <p className="mt-2 text-sm text-stone-500">
             Not enough for a car yet — but you&apos;re{" "}
             {formatNumber(cars.everyman.count * 100, 0)}% of the way to a Civic.
           </p>

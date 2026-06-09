@@ -32,10 +32,10 @@ export default function LoginForm({
       )}
 
       {googleEnabled && devEnabled && (
-        <div className="flex items-center gap-3 text-xs text-slate-500">
-          <span className="h-px flex-1 bg-white/10" />
+        <div className="flex items-center gap-3 text-xs text-stone-500">
+          <span className="h-0.5 flex-1 bg-black/20" />
           or
-          <span className="h-px flex-1 bg-white/10" />
+          <span className="h-0.5 flex-1 bg-black/20" />
         </div>
       )}
 
@@ -71,14 +71,14 @@ export default function LoginForm({
           <button type="submit" disabled={loading} className="btn-gold w-full py-3">
             {loading ? "Signing in…" : "Continue with demo account"}
           </button>
-          <p className="text-center text-xs text-slate-500">
+          <p className="text-center text-xs text-stone-500">
             Demo login — no password, for trying the app.
           </p>
         </form>
       )}
 
       {!googleEnabled && !devEnabled && (
-        <p className="text-sm text-amber-300/90">
+        <p className="text-sm font-semibold text-monored">
           No sign-in method is configured. Set <code>GOOGLE_CLIENT_ID</code>/
           <code>GOOGLE_CLIENT_SECRET</code> or <code>ENABLE_DEV_LOGIN=true</code>{" "}
           in your <code>.env</code>.

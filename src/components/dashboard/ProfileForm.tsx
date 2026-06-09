@@ -51,7 +51,7 @@ export default function ProfileForm({
           className="input"
         />
       </div>
-      {error && <p className="text-xs text-rose-300">{error}</p>}
+      {error && <p className="text-xs text-rose-700">{error}</p>}
       <button type="submit" disabled={saving} className="btn-ghost w-full">
         {saving ? "Saving…" : "Update comparison"}
       </button>

@@ -15,19 +15,23 @@ export default async function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-      <Link href="/" className="mb-8 text-center text-lg font-extrabold">
-        💰 Money <span className="gold-text">Playground</span>
+      <Link
+        href="/"
+        className="mx-auto mb-8 rounded-md border-[3px] border-monoink bg-monored px-4 py-2 text-lg font-black uppercase tracking-tight text-white shadow-deed-sm"
+      >
+        💰 Money Playground
       </Link>
       <div className="card">
-        <h1 className="text-2xl font-bold">Welcome in</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <div className="deed-bar bg-board-deep">Pass GO</div>
+        <h1 className="mono-title text-2xl">Welcome in</h1>
+        <p className="mt-1 text-sm font-semibold text-stone-500">
           Sign in to start building your portfolio.
         </p>
         <div className="mt-6">
           <LoginForm googleEnabled={googleEnabled} devEnabled={devEnabled} />
         </div>
       </div>
-      <p className="mt-6 text-center text-xs text-slate-500">
+      <p className="mt-6 text-center text-xs font-semibold text-cream/80">
         For entertainment only. Not financial advice.
       </p>
     </main>
