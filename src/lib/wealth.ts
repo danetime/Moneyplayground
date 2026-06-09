@@ -15,11 +15,12 @@
 //   • MEDIAN_BY_AGE — real median household total wealth by age of the household
 //     reference person (ONS Figure 4).
 //
-// Per-age thresholds are produced by shifting the real national curve so its
-// median lands on each age band's real median — i.e. we assume each age band has
-// a similar distribution *shape*, anchored to its own real median. So both the
-// national curve and every age-band median are exact ONS figures; only the spread
-// within a band is modelled. For entertainment, not precise personal statistics.
+// Per-age thresholds are produced by anchoring each band to its real ONS median,
+// then borrowing the *shape* of the real national curve — but dampened, because a
+// single age band is far less spread out than the country as a whole (see
+// WITHIN_COHORT_K below for the calibration). So every band median and the
+// national curve are exact ONS figures; only the within-band spread is modelled.
+// For entertainment, not precise personal statistics.
 //
 // NOTE: this is HOUSEHOLD total wealth (incl. home equity and pensions). For a
 // fair comparison, enter your property and pension in the Other Assets panel —
@@ -174,6 +175,37 @@ function topLabelFor(topPercent: number): string {
   return `Bottom ${Math.round(100 - topPercent)}%`;
 }
 
+// Within-cohort compression.
+//
+// Stretching the *whole* national curve onto a band's median over-states how
+// spread out that band is, because the national curve also contains the gap
+// *between* young and old. Sanity check: uncompressed, the wealthiest band
+// (55–64, median £553k) gets a P90 of ~£2.6m — nearly double the national P90
+// of £1.41m, which is impossible when that band dominates the very top.
+//
+// So we pull each band's percentiles toward its own median by factor K. K≈0.45
+// is the value that makes the wealthiest band's P90 reconcile with the national
+// P90 (£1.41m). The band medians stay exact; only the spread is dampened. Still
+// modelled, but now calibrated against a real constraint rather than assuming a
+// single cohort is as unequal as the whole country.
+const WITHIN_COHORT_K = 0.45;
+
+/** Percentile of `value` within a cohort whose real median is `median`. */
+function percentileWithin(value: number, median: number): number {
+  if (value <= 0 || median <= 0) return 0;
+  // Map the value to its equivalent point on the national curve, dampening the
+  // distance from the median, then read the national percentile.
+  const equivalentNational =
+    NAT_MEDIAN * (1 + (value / median - 1) / WITHIN_COHORT_K);
+  return nationalPercentile(equivalentNational);
+}
+
+/** Inverse: the cohort wealth at national-curve percentile `pct`. */
+function valueWithinAt(pct: number, median: number): number {
+  const nat = nationalValueAt(pct);
+  return Math.round(median * (1 + (nat / NAT_MEDIAN - 1) * WITHIN_COHORT_K));
+}
+
 export type RegionComparison = {
   region: Region;
   percentile: number;
@@ -183,14 +215,13 @@ export type RegionComparison = {
   multipleOfMedian: number;
 };
 
-/** Rank a net worth within a GB region (same curve-shift approach as by age). */
+/** Rank a net worth within a GB region (same approach as the age comparison). */
 export function compareWealthByRegion(
   value: number,
   region: Region,
 ): RegionComparison {
   const median = MEDIAN_BY_REGION[region];
-  const scale = NAT_MEDIAN / median;
-  const percentile = nationalPercentile(value * scale);
+  const percentile = percentileWithin(value, median);
   const topPercent = Math.max(0.01, 100 - percentile);
   return {
     region,
@@ -207,10 +238,7 @@ export function compareWealth(
   ageBracket: AgeBracket,
 ): Comparison {
   const median = MEDIAN_BY_AGE[ageBracket];
-  // Shift the national curve onto this age band: a value is ranked as if the
-  // band shared the national distribution shape, scaled to its own median.
-  const scale = NAT_MEDIAN / median;
-  const percentile = nationalPercentile(value * scale);
+  const percentile = percentileWithin(value, median);
   const topPercent = Math.max(0.01, 100 - percentile);
 
   const tierDefs: { label: string; percentile: number }[] = [
@@ -222,8 +250,7 @@ export function compareWealth(
 
   const tiers = tierDefs.map((t) => ({
     ...t,
-    // Convert a national-curve threshold back to this age band's scale.
-    value: Math.round(nationalValueAt(t.percentile) / scale),
+    value: valueWithinAt(t.percentile, median),
   }));
 
   return {
