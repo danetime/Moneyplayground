@@ -14,6 +14,7 @@ type EnrichedHolding = {
   value: number;
   gain: number | null;
   gainPct: number | null;
+  dayChangePct: number | null;
 };
 
 export default function HoldingsPanel({
@@ -73,7 +74,7 @@ export default function HoldingsPanel({
             <input
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-              placeholder="Ticker (e.g. AAPL)"
+              placeholder="Any ticker (e.g. AAPL)"
               className="input uppercase"
               list="stock-suggestions"
               autoComplete="off"
@@ -127,6 +128,19 @@ export default function HoldingsPanel({
                   <p className="truncate font-semibold">{h.name}</p>
                   <p className="text-xs text-slate-500">
                     {h.shares} sh · {formatUSD(h.price)}
+                    {h.dayChangePct != null && (
+                      <span
+                        className={
+                          h.dayChangePct >= 0
+                            ? " text-emerald-400"
+                            : " text-rose-400"
+                        }
+                      >
+                        {" "}
+                        {h.dayChangePct >= 0 ? "+" : ""}
+                        {h.dayChangePct.toFixed(2)}% today
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="text-right">

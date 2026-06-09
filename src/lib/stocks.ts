@@ -1,9 +1,8 @@
-// Mock stock universe + pricing.
+// Built-in stock universe.
 //
-// This is intentionally a static dataset so the whole app works offline with
-// no API keys. To go live later, replace `getQuote`/`getQuotes` with calls to
-// a real provider (Finnhub, Alpha Vantage, etc.) — the rest of the app only
-// depends on these two functions and the `Quote` shape.
+// Live pricing lives in `src/lib/quotes.ts`. This static dataset serves two
+// jobs: autocomplete suggestions in the add-stock form, and offline fallback
+// prices so the app keeps working when no network is available.
 
 export type Stock = {
   symbol: string;
@@ -45,25 +44,17 @@ export const STOCK_UNIVERSE: Stock[] = [
 
 const BY_SYMBOL = new Map(STOCK_UNIVERSE.map((s) => [s.symbol, s]));
 
-export type Quote = {
+export type FallbackQuote = {
   symbol: string;
   name: string;
   price: number;
 };
 
-export function getQuote(symbol: string): Quote | null {
+/** Static price for a symbol in the built-in universe (offline fallback). */
+export function getFallbackQuote(symbol: string): FallbackQuote | null {
   const s = BY_SYMBOL.get(symbol.toUpperCase());
   if (!s) return null;
   return { symbol: s.symbol, name: s.name, price: s.price };
-}
-
-export function getQuotes(symbols: string[]): Record<string, Quote> {
-  const out: Record<string, Quote> = {};
-  for (const sym of symbols) {
-    const q = getQuote(sym);
-    if (q) out[q.symbol] = q;
-  }
-  return out;
 }
 
 export function isKnownSymbol(symbol: string): boolean {

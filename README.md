@@ -11,7 +11,8 @@ worldwide.
 ## Features
 
 - 🔐 **Sign in with Google** (plus a passwordless demo login for local trials)
-- 📈 **Add stocks to your portfolio** and track total value
+- 📈 **Add any stock to your portfolio** with **live market prices** (Yahoo
+  Finance by default, Finnhub optional, offline mock fallback)
 - 🪙 **Visualize your wealth** as gold (oz / kg / bars), diamonds (carats), and cars
 - 📊 **Wealth percentile** — see if you're top 25 / 10 / 5 / 1% for your age and country
 - 🗄️ **Persistent database** (SQLite for dev, swap to Postgres for production)
@@ -24,7 +25,7 @@ worldwide.
 | Styling  | Tailwind CSS                             |
 | Auth     | NextAuth (Google OAuth + demo login)     |
 | Database | Prisma ORM + SQLite (dev)                |
-| Prices   | Mock data (`src/lib/stocks.ts`)          |
+| Prices   | Live (Yahoo / Finnhub) with mock fallback (`src/lib/quotes.ts`) |
 
 ## Getting started
 
@@ -68,7 +69,8 @@ prisma/
   seed.ts                # demo data
 src/
   lib/
-    stocks.ts            # mock stock universe + quotes  ← swap for a real API later
+    quotes.ts            # live quotes: Finnhub → Yahoo → mock fallback, cached
+    stocks.ts            # built-in universe (autocomplete + offline prices)
     wealth.ts            # net-worth percentile dataset + comparison logic
     visualize.ts         # gold / diamond / car conversions
     auth.ts              # NextAuth config (Google + demo)
@@ -85,11 +87,20 @@ src/
   components/            # UI (dashboard widgets, forms)
 ```
 
+## Live prices
+
+Quotes come from `src/lib/quotes.ts`, which tries providers in order:
+
+1. **Finnhub** — if `FINNHUB_API_KEY` is set (free at [finnhub.io](https://finnhub.io))
+2. **Yahoo Finance** — keyless, works out of the box
+3. **Built-in mock prices** — automatic fallback when offline, so the app
+   never breaks
+
+Quotes are cached in memory for 60 seconds. Any real ticker can be added —
+new symbols are validated against live data when you add them.
+
 ## Going to production
 
-- **Prices:** replace `getQuote`/`getQuotes` in `src/lib/stocks.ts` with a real
-  provider (Finnhub, Alpha Vantage, IEX). The rest of the app only depends on
-  those two functions.
 - **Database:** change the Prisma datasource `provider` to `postgresql` and
   point `DATABASE_URL` at your Postgres instance, then `npm run db:push`.
 - **Wealth data:** the figures in `src/lib/wealth.ts` are approximations — swap
@@ -99,7 +110,7 @@ src/
 
 ## Roadmap ideas
 
-- Real-time prices + daily change & charts
+- Price charts and richer market data
 - Historical portfolio performance over time
 - More asset types (crypto, cash, property) for a true net-worth view
 - Shareable "wealth card" images

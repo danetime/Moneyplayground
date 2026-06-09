@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getQuote } from "@/lib/stocks";
+import { getQuotes } from "@/lib/quotes";
 import {
   ageToBracket,
   compareWealth,
@@ -25,9 +25,10 @@ export default async function DashboardPage() {
   });
   if (!user) redirect("/login");
 
-  // Price each holding from the mock quote source.
+  // Price each holding with live quotes (mock fallback when offline).
+  const quotes = await getQuotes(user.holdings.map((h) => h.symbol));
   const enriched = user.holdings.map((h) => {
-    const quote = getQuote(h.symbol);
+    const quote = quotes[h.symbol.toUpperCase()];
     const price = quote?.price ?? 0;
     const value = price * h.shares;
     const cost = h.costBasis != null ? h.costBasis * h.shares : null;
@@ -41,8 +42,17 @@ export default async function DashboardPage() {
       costBasis: h.costBasis,
       gain: cost != null ? value - cost : null,
       gainPct: cost && cost > 0 ? ((value - cost) / cost) * 100 : null,
+      dayChangePct: quote?.changePct ?? null,
+      dayChange: quote?.change != null ? quote.change * h.shares : null,
     };
   });
+
+  const pricesLive = Object.values(quotes).some((q) => q.source !== "mock");
+  const dayChangeTotal = enriched.reduce(
+    (sum, h) => sum + (h.dayChange ?? 0),
+    0,
+  );
+  const hasDayChange = enriched.some((h) => h.dayChange != null);
 
   const totalValue = enriched.reduce((sum, h) => sum + h.value, 0);
   const totalCost = enriched.reduce(
@@ -76,6 +86,8 @@ export default async function DashboardPage() {
             totalValue={totalValue}
             totalGain={totalGain}
             holdingsCount={enriched.length}
+            pricesLive={pricesLive}
+            dayChange={hasDayChange ? dayChangeTotal : null}
           />
           <WealthVisualizer
             totalValue={totalValue}

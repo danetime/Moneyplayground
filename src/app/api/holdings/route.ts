@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
-import { isKnownSymbol } from "@/lib/stocks";
+import { getQuote } from "@/lib/quotes";
 
 export async function GET() {
   const userId = await getCurrentUserId();
@@ -31,15 +31,25 @@ export async function POST(req: Request) {
   const symbol = body.symbol?.trim().toUpperCase();
   const shares = Number(body.shares);
 
-  if (!symbol || !isKnownSymbol(symbol)) {
+  if (!symbol || !/^[A-Z0-9.\-]{1,10}$/.test(symbol)) {
     return NextResponse.json(
-      { error: "Unknown ticker symbol" },
+      { error: "Enter a valid ticker symbol" },
       { status: 400 },
     );
   }
   if (!Number.isFinite(shares) || shares <= 0) {
     return NextResponse.json(
       { error: "Shares must be a positive number" },
+      { status: 400 },
+    );
+  }
+
+  // Validate against live data: any real ticker is accepted. Falls back to
+  // the built-in universe when offline.
+  const quote = await getQuote(symbol);
+  if (!quote) {
+    return NextResponse.json(
+      { error: `Couldn't find a stock with ticker "${symbol}"` },
       { status: 400 },
     );
   }
