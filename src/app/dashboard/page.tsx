@@ -2,10 +2,21 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getQuotes } from "@/lib/quotes";
-import { ageToBracket, compareWealth } from "@/lib/wealth";
+import { getQuote, getQuotes } from "@/lib/quotes";
+import {
+  ageToBracket,
+  compareWealth,
+  compareWealthByRegion,
+  isRegion,
+} from "@/lib/wealth";
 import { toGbp } from "@/lib/currency";
-import { toGold, toDiamonds, toCars } from "@/lib/visualize";
+import {
+  toGold,
+  toDiamonds,
+  toCars,
+  toHouses,
+  toSausageRolls,
+} from "@/lib/visualize";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import PortfolioSummary from "@/components/dashboard/PortfolioSummary";
 import WealthVisualizer from "@/components/dashboard/WealthVisualizer";
@@ -74,14 +85,28 @@ export default async function DashboardPage() {
   // ---- Net worth = stocks + other assets ----
   const netWorth = stocksValue + assetsValue;
 
-  const gold = toGold(netWorth);
+  // Live gold price (Yahoo COMEX gold futures, USD/oz → GBP). Falls back to a
+  // built-in constant inside toGold when the quote is unavailable.
+  const goldQuote = await getQuote("GC=F");
+  const goldPriceGbp = goldQuote
+    ? toGbp(goldQuote.price, goldQuote.currency)
+    : undefined;
+
+  const userRegion = user.region && isRegion(user.region) ? user.region : null;
+
+  const gold = toGold(netWorth, goldPriceGbp);
   const diamonds = toDiamonds(netWorth);
   const cars = toCars(netWorth);
+  const houses = toHouses(netWorth, userRegion);
+  const sausageRolls = toSausageRolls(netWorth);
 
   const currentYear = new Date().getFullYear();
   const age = user.birthYear ? currentYear - user.birthYear : null;
   const comparison =
     age != null ? compareWealth(netWorth, ageToBracket(age)) : null;
+  const regionComparison = userRegion
+    ? compareWealthByRegion(netWorth, userRegion)
+    : null;
 
   return (
     <div className="mx-auto max-w-6xl px-6 pb-24">
@@ -106,6 +131,8 @@ export default async function DashboardPage() {
             gold={gold}
             diamonds={diamonds}
             cars={cars}
+            houses={houses}
+            sausageRolls={sausageRolls}
           />
           <HoldingsPanel holdings={enriched} />
           <AssetsPanel assets={otherAssets} />
@@ -114,7 +141,9 @@ export default async function DashboardPage() {
         <div className="space-y-6">
           <ComparisonCard
             comparison={comparison}
+            regionComparison={regionComparison}
             birthYear={user.birthYear}
+            region={user.region}
             totalValue={netWorth}
           />
         </div>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId } from "@/lib/session";
+import { isRegion } from "@/lib/wealth";
 
 export async function PATCH(req: Request) {
   const userId = await getCurrentUserId();
@@ -8,14 +9,14 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { birthYear?: number | null };
+  let body: { birthYear?: number | null; region?: string | null };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const data: { birthYear?: number | null } = {};
+  const data: { birthYear?: number | null; region?: string | null } = {};
 
   if (body.birthYear !== undefined) {
     if (body.birthYear === null) {
@@ -33,10 +34,23 @@ export async function PATCH(req: Request) {
     }
   }
 
+  if (body.region !== undefined) {
+    if (body.region === null || body.region === "") {
+      data.region = null;
+    } else if (isRegion(body.region)) {
+      data.region = body.region;
+    } else {
+      return NextResponse.json(
+        { error: "Choose a valid region" },
+        { status: 400 },
+      );
+    }
+  }
+
   const user = await prisma.user.update({
     where: { id: userId },
     data,
-    select: { birthYear: true },
+    select: { birthYear: true, region: true },
   });
   return NextResponse.json({ user });
 }

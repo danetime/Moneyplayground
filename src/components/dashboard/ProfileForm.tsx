@@ -2,14 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { REGIONS } from "@/lib/wealth";
 
 export default function ProfileForm({
   birthYear,
+  region,
 }: {
   birthYear: number | null;
+  region: string | null;
 }) {
   const router = useRouter();
   const [year, setYear] = useState(birthYear ? String(birthYear) : "");
+  const [where, setWhere] = useState(region ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,6 +26,7 @@ export default function ProfileForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         birthYear: year ? Number(year) : null,
+        region: where || null,
       }),
     });
     setSaving(false);
@@ -50,6 +55,24 @@ export default function ProfileForm({
           max={new Date().getFullYear() - 13}
           className="input"
         />
+      </div>
+      <div>
+        <label className="label" htmlFor="region">
+          Region
+        </label>
+        <select
+          id="region"
+          value={where}
+          onChange={(e) => setWhere(e.target.value)}
+          className="input"
+        >
+          <option value="">— Choose your region —</option>
+          {REGIONS.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
       </div>
       {error && <p className="text-xs text-rose-700">{error}</p>}
       <button type="submit" disabled={saving} className="btn-ghost w-full">

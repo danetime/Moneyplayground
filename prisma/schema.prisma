@@ -23,6 +23,8 @@ model User {
   // App-specific profile fields used for wealth comparison.
   birthYear     Int?
   country       String?   @default("UK")
+  // GB region (ONS name, e.g. "London", "South East") for regional comparison.
+  region        String?
 
   accounts Account[]
   sessions Session[]

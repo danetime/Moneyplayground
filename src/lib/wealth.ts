@@ -74,6 +74,42 @@ const MEDIAN_BY_AGE: Record<AgeBracket, number> = {
   "65+": 468_700,
 };
 
+// Real median household total wealth by region, ONS WAS Apr 2018–Mar 2020
+// (Figure 5, "South East wealthiest region…"). Same survey and definition as
+// the national curve above, so the same curve-shift trick applies per region.
+export const REGIONS = [
+  "North East",
+  "North West",
+  "Yorkshire & the Humber",
+  "East Midlands",
+  "West Midlands",
+  "East of England",
+  "London",
+  "South East",
+  "South West",
+  "Wales",
+  "Scotland",
+] as const;
+export type Region = (typeof REGIONS)[number];
+
+const MEDIAN_BY_REGION: Record<Region, number> = {
+  "North East": 168_500,
+  "North West": 237_500,
+  "Yorkshire & the Humber": 214_900,
+  "East Midlands": 262_800,
+  "West Midlands": 262_400,
+  "East of England": 398_900,
+  London: 340_300,
+  "South East": 503_400,
+  "South West": 379_900,
+  Wales: 275_700,
+  Scotland: 214_000,
+};
+
+export function isRegion(value: string): value is Region {
+  return (REGIONS as readonly string[]).includes(value);
+}
+
 export function ageToBracket(age: number): AgeBracket {
   if (age < 25) return "18-24";
   if (age < 35) return "25-34";
@@ -136,6 +172,34 @@ function topLabelFor(topPercent: number): string {
   if (topPercent <= 25) return "Top 25%";
   if (topPercent <= 50) return "Top 50%";
   return `Bottom ${Math.round(100 - topPercent)}%`;
+}
+
+export type RegionComparison = {
+  region: Region;
+  percentile: number;
+  topPercent: number;
+  topLabel: string;
+  median: number;
+  multipleOfMedian: number;
+};
+
+/** Rank a net worth within a GB region (same curve-shift approach as by age). */
+export function compareWealthByRegion(
+  value: number,
+  region: Region,
+): RegionComparison {
+  const median = MEDIAN_BY_REGION[region];
+  const scale = NAT_MEDIAN / median;
+  const percentile = nationalPercentile(value * scale);
+  const topPercent = Math.max(0.01, 100 - percentile);
+  return {
+    region,
+    percentile,
+    topPercent,
+    topLabel: topLabelFor(topPercent),
+    median,
+    multipleOfMedian: median > 0 ? value / median : 0,
+  };
 }
 
 export function compareWealth(

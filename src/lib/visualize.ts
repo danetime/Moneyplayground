@@ -7,7 +7,7 @@
 export { formatGBP, formatGBP as formatMoney } from "./currency";
 
 // --- Reference prices (approximate, in GBP, for fun) ---
-const GOLD_PRICE_PER_OZ = 2_600; // £ per troy ounce
+const GOLD_PRICE_PER_OZ = 2_600; // £ per troy ounce — fallback when no live quote
 const OZ_PER_KG = 32.1507;
 const GOOD_DELIVERY_BAR_OZ = 400; // standard 400 oz gold bar (~12.4 kg)
 
@@ -18,16 +18,22 @@ export type GoldView = {
   kilograms: number;
   bars: number; // number of 400oz Good Delivery bars
   tonnes: number;
+  pricePerOz: number; // £/oz used for the conversion
+  live: boolean; // true when priced from a live gold quote
 };
 
-export function toGold(value: number): GoldView {
-  const ounces = value / GOLD_PRICE_PER_OZ;
+export function toGold(value: number, livePricePerOz?: number): GoldView {
+  const pricePerOz =
+    livePricePerOz && livePricePerOz > 0 ? livePricePerOz : GOLD_PRICE_PER_OZ;
+  const ounces = value / pricePerOz;
   const kilograms = ounces / OZ_PER_KG;
   return {
     ounces,
     kilograms,
     bars: ounces / GOOD_DELIVERY_BAR_OZ,
     tonnes: kilograms / 1000,
+    pricePerOz,
+    live: pricePerOz !== GOLD_PRICE_PER_OZ,
   };
 }
 
@@ -85,6 +91,52 @@ export function toCars(value: number): CarView {
     best,
     everyman: { car: everymanCar, count: value / everymanCar.price },
   };
+}
+
+// --- Houses (average prices by GB region, HM Land Registry / ONS HPI, 2026) ---
+// Approximate and for fun; region names match src/lib/wealth.ts REGIONS.
+export const UK_AVG_HOUSE_PRICE = 268_000;
+
+export const HOUSE_PRICE_BY_REGION: Record<string, number> = {
+  "North East": 162_000,
+  "North West": 213_000,
+  "Yorkshire & the Humber": 206_000,
+  "East Midlands": 248_000,
+  "West Midlands": 255_000,
+  "East of England": 330_000,
+  London: 510_000,
+  "South East": 380_000,
+  "South West": 315_000,
+  Wales: 213_000,
+  Scotland: 195_000,
+};
+
+export type HouseView = {
+  count: number; // homes you could buy outright in `where`
+  price: number; // average price used
+  where: string; // region name or "the UK"
+  // Always-fun extremes for contrast.
+  londonCount: number;
+  northEastCount: number;
+};
+
+export function toHouses(value: number, region?: string | null): HouseView {
+  const price =
+    (region && HOUSE_PRICE_BY_REGION[region]) || UK_AVG_HOUSE_PRICE;
+  return {
+    count: value / price,
+    price,
+    where: region && HOUSE_PRICE_BY_REGION[region] ? region : "the UK",
+    londonCount: value / HOUSE_PRICE_BY_REGION["London"],
+    northEastCount: value / HOUSE_PRICE_BY_REGION["North East"],
+  };
+}
+
+// --- Greggs sausage rolls (the one true unit of British wealth) ---
+export const SAUSAGE_ROLL_PRICE = 1.35; // £, standard high-street price
+
+export function toSausageRolls(value: number): number {
+  return value / SAUSAGE_ROLL_PRICE;
 }
 
 // --- Number formatting (non-currency) ---

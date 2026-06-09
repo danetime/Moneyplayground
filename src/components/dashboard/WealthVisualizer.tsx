@@ -4,6 +4,7 @@ import {
   type GoldView,
   type DiamondView,
   type CarView,
+  type HouseView,
 } from "@/lib/visualize";
 
 // Render up to `max` emoji icons to represent a count, with a "+N" overflow.
@@ -45,11 +46,15 @@ export default function WealthVisualizer({
   gold,
   diamonds,
   cars,
+  houses,
+  sausageRolls,
 }: {
   totalValue: number;
   gold: GoldView;
   diamonds: DiamondView;
   cars: CarView;
+  houses: HouseView;
+  sausageRolls: number;
 }) {
   if (totalValue <= 0) {
     return (
@@ -75,7 +80,13 @@ export default function WealthVisualizer({
           <div className="deed-bar bg-deed-yellow !text-monoink">Gold Reserve</div>
           <div className="flex items-baseline justify-between">
             <h3 className="mono-title text-lg">🪙 Piles of gold</h3>
-            <span className="text-xs font-bold text-stone-500">~£2,600/oz</span>
+            <span className="text-xs font-bold text-stone-500">
+              {gold.live ? "" : "~"}
+              {formatMoney(gold.pricePerOz, { compact: true })}/oz
+              {gold.live && (
+                <span className="ml-1 text-emerald-700">● live</span>
+              )}
+            </span>
           </div>
           <p className="mt-2 text-3xl font-black gold-text">
             {formatNumber(gold.kilograms)} kg
@@ -109,6 +120,54 @@ export default function WealthVisualizer({
           </p>
           <div className="mt-4">
             <IconPile count={diamonds.stones} emoji="💎" />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {/* Houses */}
+        <div className="card animate-fade-up">
+          <div className="deed-bar bg-deed-red">Property Ladder</div>
+          <div className="flex items-baseline justify-between">
+            <h3 className="mono-title text-lg">🏠 Houses</h3>
+            <span className="text-xs font-bold text-stone-500">
+              avg {formatMoney(houses.price, { compact: true })} in {houses.where}
+            </span>
+          </div>
+          <p className="mt-2 text-3xl font-black text-deed-red">
+            {formatNumber(houses.count, houses.count >= 10 ? 0 : 1)} homes
+          </p>
+          <p className="text-sm text-stone-500">
+            bought outright in {houses.where}
+          </p>
+          <div className="mt-4">
+            <IconPile count={houses.count} emoji="🏠" />
+            <p className="mt-2 text-xs text-stone-500">
+              Or {formatNumber(houses.northEastCount, 1)} in the North East ·{" "}
+              {formatNumber(houses.londonCount, 1)} in London
+            </p>
+          </div>
+        </div>
+
+        {/* Greggs */}
+        <div className="card animate-fade-up">
+          <div className="deed-bar bg-deed-orange">Greggs Counter</div>
+          <div className="flex items-baseline justify-between">
+            <h3 className="mono-title text-lg">🥐 Sausage rolls</h3>
+            <span className="text-xs font-bold text-stone-500">£1.35 each</span>
+          </div>
+          <p className="mt-2 text-3xl font-black text-deed-orange">
+            {formatNumber(sausageRolls, 0)}
+          </p>
+          <p className="text-sm text-stone-500">
+            Greggs sausage rolls — about{" "}
+            {formatNumber(sausageRolls / 365, 0)} a day for a year
+          </p>
+          <div className="mt-4">
+            <IconPile count={Math.min(sausageRolls, 999_999)} emoji="🥐" max={30} />
+            <p className="mt-2 text-xs text-stone-500">
+              The one true unit of British wealth.
+            </p>
           </div>
         </div>
       </div>

@@ -1,5 +1,9 @@
 import { formatMoney } from "@/lib/visualize";
-import { type Comparison, WEALTH_SOURCE } from "@/lib/wealth";
+import {
+  type Comparison,
+  type RegionComparison,
+  WEALTH_SOURCE,
+} from "@/lib/wealth";
 import ProfileForm from "./ProfileForm";
 
 // Property-set colours (Monopoly) for the wealth milestone tiers, cheap → dear.
@@ -30,11 +34,15 @@ function PercentileGauge({ percentile }: { percentile: number }) {
 
 export default function ComparisonCard({
   comparison,
+  regionComparison,
   birthYear,
+  region,
   totalValue,
 }: {
   comparison: Comparison | null;
+  regionComparison: RegionComparison | null;
   birthYear: number | null;
+  region: string | null;
   totalValue: number;
 }) {
   return (
@@ -105,9 +113,34 @@ export default function ComparisonCard({
         </p>
       )}
 
+      {regionComparison && (
+        <div className="mt-6 border-t-2 border-dashed border-black/20 pt-5">
+          <p className="label">Your region</p>
+          <div className="rounded-md border-2 border-monoink bg-white px-3 py-3">
+            <p className="text-sm font-semibold text-stone-600">
+              📍 In <span className="font-black">{regionComparison.region}</span>{" "}
+              you&apos;re in the{" "}
+              <span className="font-black text-monored">
+                {regionComparison.topLabel.toLowerCase()}
+              </span>
+              {" — "}richer than {regionComparison.percentile.toFixed(0)}% of
+              households.
+            </p>
+            <p className="mt-1 text-xs font-semibold text-stone-500">
+              Regional median:{" "}
+              {formatMoney(regionComparison.median, { compact: true })} · you
+              have{" "}
+              {regionComparison.multipleOfMedian >= 1
+                ? `${regionComparison.multipleOfMedian.toFixed(1)}× that`
+                : `${(regionComparison.multipleOfMedian * 100).toFixed(0)}% of that`}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="mt-6 border-t-2 border-dashed border-black/20 pt-5">
         <p className="label">Your details</p>
-        <ProfileForm birthYear={birthYear} />
+        <ProfileForm birthYear={birthYear} region={region} />
       </div>
 
       <p className="mt-4 text-[10px] leading-snug text-stone-400">
