@@ -27,6 +27,7 @@ model User {
   accounts Account[]
   sessions Session[]
   holdings Holding[]
+  assets   Asset[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -83,4 +84,20 @@ model Holding {
 
   // One row per symbol per user; adding more shares updates the row.
   @@unique([userId, symbol])
+}
+
+// Non-stock assets: property, pensions, cash, and anything else.
+// "value" is the gross value in GBP; "debt" is any liability (e.g. mortgage).
+// Net contribution to wealth = value - debt.
+model Asset {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "property" | "pension" | "cash" | "other"
+  name      String
+  value     Float
+  debt      Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

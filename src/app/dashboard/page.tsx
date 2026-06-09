@@ -11,6 +11,7 @@ import PortfolioSummary from "@/components/dashboard/PortfolioSummary";
 import WealthVisualizer from "@/components/dashboard/WealthVisualizer";
 import ComparisonCard from "@/components/dashboard/ComparisonCard";
 import HoldingsPanel from "@/components/dashboard/HoldingsPanel";
+import AssetsPanel from "@/components/dashboard/AssetsPanel";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
@@ -18,18 +19,19 @@ export default async function DashboardPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    include: { holdings: { orderBy: { createdAt: "asc" } } },
+    include: {
+      holdings: { orderBy: { createdAt: "asc" } },
+      assets:   { orderBy: { createdAt: "asc" } },
+    },
   });
   if (!user) redirect("/login");
 
-  // Price each holding with live quotes (mock fallback when offline), with all
-  // amounts converted from the quote's native currency into GBP for display.
+  // ---- Stock holdings ----
   const quotes = await getQuotes(user.holdings.map((h) => h.symbol));
   const enriched = user.holdings.map((h) => {
     const quote = quotes[h.symbol.toUpperCase()];
     const price = quote ? toGbp(quote.price, quote.currency) : 0;
     const value = price * h.shares;
-    // Cost basis is entered by the user in GBP, so it's already in pounds.
     const cost = h.costBasis != null ? h.costBasis * h.shares : null;
     const dayChange =
       quote?.change != null ? toGbp(quote.change, quote.currency) * h.shares : null;
@@ -49,27 +51,37 @@ export default async function DashboardPage() {
   });
 
   const pricesLive = Object.values(quotes).some((q) => q.source !== "mock");
-  const dayChangeTotal = enriched.reduce(
-    (sum, h) => sum + (h.dayChange ?? 0),
-    0,
-  );
+  const dayChangeTotal = enriched.reduce((sum, h) => sum + (h.dayChange ?? 0), 0);
   const hasDayChange = enriched.some((h) => h.dayChange != null);
 
-  const totalValue = enriched.reduce((sum, h) => sum + h.value, 0);
+  const stocksValue = enriched.reduce((sum, h) => sum + h.value, 0);
   const totalCost = enriched.reduce(
     (sum, h) => sum + (h.costBasis != null ? h.costBasis * h.shares : 0),
     0,
   );
-  const totalGain = totalCost > 0 ? totalValue - totalCost : null;
+  const totalGain = totalCost > 0 ? stocksValue - totalCost : null;
 
-  const gold = toGold(totalValue);
-  const diamonds = toDiamonds(totalValue);
-  const cars = toCars(totalValue);
+  // ---- Other assets (property, pension, cash, etc.) ----
+  const otherAssets = user.assets.map((a) => ({
+    id: a.id,
+    type: a.type as "property" | "pension" | "cash" | "other",
+    name: a.name,
+    value: a.value,
+    debt: a.debt,
+  }));
+  const assetsValue = otherAssets.reduce((sum, a) => sum + (a.value - a.debt), 0);
+
+  // ---- Net worth = stocks + other assets ----
+  const netWorth = stocksValue + assetsValue;
+
+  const gold = toGold(netWorth);
+  const diamonds = toDiamonds(netWorth);
+  const cars = toCars(netWorth);
 
   const currentYear = new Date().getFullYear();
   const age = user.birthYear ? currentYear - user.birthYear : null;
   const comparison =
-    age != null ? compareWealth(totalValue, ageToBracket(age)) : null;
+    age != null ? compareWealth(netWorth, ageToBracket(age)) : null;
 
   return (
     <div className="mx-auto max-w-6xl px-6 pb-24">
@@ -81,26 +93,29 @@ export default async function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <PortfolioSummary
-            totalValue={totalValue}
+            totalValue={netWorth}
+            stocksValue={stocksValue}
+            assetsValue={assetsValue}
             totalGain={totalGain}
             holdingsCount={enriched.length}
             pricesLive={pricesLive}
             dayChange={hasDayChange ? dayChangeTotal : null}
           />
           <WealthVisualizer
-            totalValue={totalValue}
+            totalValue={netWorth}
             gold={gold}
             diamonds={diamonds}
             cars={cars}
           />
           <HoldingsPanel holdings={enriched} />
+          <AssetsPanel assets={otherAssets} />
         </div>
 
         <div className="space-y-6">
           <ComparisonCard
             comparison={comparison}
             birthYear={user.birthYear}
-            totalValue={totalValue}
+            totalValue={netWorth}
           />
         </div>
       </div>
