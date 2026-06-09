@@ -1,34 +1,29 @@
 // Wealth comparison (UK).
 //
-// Given a net-worth figure and an age bracket, work out roughly where someone
-// sits in the UK wealth distribution ("you're in the top X%").
+// Given a net-worth figure and an age bracket, work out where someone sits in the
+// UK wealth distribution ("you're in the top X%").
 //
-// DATA SOURCE: ONS Wealth and Assets Survey — "Distribution of individual total
-// wealth by characteristic in Great Britain" (the individual-level release of the
-// same survey behind the Guardian's wealth calculator). Total wealth = property +
-// private pension + financial + physical wealth.
+// DATA SOURCE: ONS Wealth and Assets Survey — "Total wealth in Great Britain,
+// April 2018 to March 2020" (the same survey behind the Guardian/IFS wealth
+// calculators). Total wealth = net property + private pension + net financial +
+// physical wealth. These are HOUSEHOLD figures.
 //
-// IMPORTANT — INDIVIDUAL, not household.
-// An earlier version compared against *household* totals, which roughly double an
-// individual's wealth (two adults sharing a home and pensions). Benchmarking one
-// person's net worth against a household made everyone look poorer than they are
-// for their age. We now use ONS *individual* total wealth, which is the correct
-// like-for-like basis for a single person's portfolio + assets.
+// Everything below is REAL ONS data, taken directly from the published tables:
+//   • NAT_CURVE — the full national household total-wealth distribution, P1…P99
+//     (ONS Figure 2). P50 = £302,500; P99 = £3,668,200 ("richest 1% had more
+//     than £3.6m"); P10 = £15,400 ("least wealthy 10% had £15,400 or less").
+//   • MEDIAN_BY_AGE — real median household total wealth by age of the household
+//     reference person (ONS Figure 4).
 //
-// Real ONS anchors used:
-//   • Median individual total wealth, GB = £125,000 (Apr 2018–Mar 2020).
-//   • Individual wealth rises with age, peaking in the 60–64 band at ~9× the
-//     30–34 band, then easing in retirement.
-// The per-age medians below are set to ONS individual total-wealth levels for
-// each band (anchored to that £125k overall median and the ~9× age gradient).
+// Per-age thresholds are produced by shifting the real national curve so its
+// median lands on each age band's real median — i.e. we assume each age band has
+// a similar distribution *shape*, anchored to its own real median. So both the
+// national curve and every age-band median are exact ONS figures; only the spread
+// within a band is modelled. For entertainment, not precise personal statistics.
 //
-// The per-age spread (p25, p75, p90, p95, p99) is MODELLED by applying a wealth-
-// distribution shape to each band's median — so the ranking is realistic but the
-// exact per-age percentile thresholds are approximations, not direct ONS reads.
-// (This environment can't download the raw ONS spreadsheets; to use the exact
-// per-age percentile table, drop its figures into THRESHOLDS below.)
-//
-// For entertainment, not precise personal statistics.
+// NOTE: this is HOUSEHOLD total wealth (incl. home equity and pensions). For a
+// fair comparison, enter your property and pension in the Other Assets panel —
+// stocks alone will under-read.
 
 export type CountryCode = "UK";
 
@@ -37,7 +32,7 @@ export const COUNTRIES: { code: CountryCode; name: string; flag: string }[] = [
 ];
 
 export const WEALTH_SOURCE =
-  "ONS Wealth & Assets Survey — individual total wealth, GB (incl. property & pensions)";
+  "ONS Wealth & Assets Survey (Apr 2018–Mar 2020) — household total wealth, GB (incl. property & pensions)";
 
 export const AGE_BRACKETS = [
   "18-24",
@@ -49,34 +44,35 @@ export const AGE_BRACKETS = [
 ] as const;
 export type AgeBracket = (typeof AGE_BRACKETS)[number];
 
-// Anchor percentiles we store values for.
-const PCTS = [25, 50, 75, 90, 95, 99] as const;
+// Real national household total-wealth distribution, ONS WAS Apr 2018–Mar 2020.
+// NAT_CURVE[i] = wealth threshold at percentile (i + 1), so index 0 = P1 … 98 = P99.
+const NAT_CURVE: number[] = [
+  -1_700, 2_500, 2_800, 4_200, 6_700, 7_800, 9_100, 11_100, 14_100, 15_400,
+  17_100, 19_400, 22_200, 25_100, 27_200, 30_200, 34_200, 36_900, 40_700, 44_700,
+  48_800, 53_600, 59_900, 65_800, 71_000, 78_500, 85_600, 92_400, 99_900, 107_200,
+  113_900, 122_200, 130_800, 139_200, 146_400, 155_800, 164_900, 174_000, 183_200, 193_800,
+  203_400, 214_000, 225_200, 236_700, 246_600, 257_400, 267_700, 277_300, 291_800, 302_500,
+  313_500, 325_300, 338_600, 351_800, 366_300, 380_800, 391_900, 407_700, 421_600, 436_100,
+  450_100, 467_300, 484_400, 502_100, 519_000, 538_200, 558_400, 575_900, 597_400, 617_900,
+  641_200, 662_900, 683_600, 709_000, 733_800, 764_500, 795_800, 826_500, 856_000, 895_000,
+  934_000, 969_600, 1_013_900, 1_057_400, 1_105_900, 1_159_100, 1_210_700, 1_274_700, 1_339_400, 1_413_700,
+  1_506_300, 1_603_600, 1_709_800, 1_853_800, 1_988_500, 2_197_500, 2_469_200, 2_862_800, 3_668_200,
+];
 
-// Per-age median INDIVIDUAL total wealth (GBP), anchored to ONS individual
-// figures: ~£125k overall median, peaking in the 55–64 band at ~9× the early-30s
-// level, then easing past State Pension age.
+// National median (P50) — the pivot used to shift the curve onto each age band.
+const NAT_MEDIAN = 302_500;
+
+// Real median household total wealth by age of household reference person
+// (ONS Figure 4). ONS's top two bands are "55 to under State Pension age" and
+// "State Pension age and over", mapped here to 55-64 and 65+.
 const MEDIAN_BY_AGE: Record<AgeBracket, number> = {
-  "18-24": 4_000,
-  "25-34": 45_000,
-  "35-44": 130_000,
-  "45-54": 190_000,
-  "55-64": 290_000,
-  "65+": 300_000,
+  "18-24": 22_300,
+  "25-34": 76_800,
+  "35-44": 198_100,
+  "45-54": 366_600,
+  "55-64": 553_400,
+  "65+": 468_700,
 };
-
-// Wealth-distribution shape: multipliers off each band's median for
-// [p25, p50, p75, p90, p95, p99]. Reflects how individual wealth fans out — a
-// long upper tail where the top 1% of a band hold ~14× its median. The spread is
-// modelled (not a direct ONS per-age read); the medians above are the real anchor.
-const SHAPE = [0.18, 1, 2.4, 4.6, 7.0, 14.0] as const;
-
-// threshold[ageBracket] = [p25, p50, p75, p90, p95, p99] in GBP.
-const THRESHOLDS: Record<AgeBracket, number[]> = Object.fromEntries(
-  (Object.keys(MEDIAN_BY_AGE) as AgeBracket[]).map((bracket) => [
-    bracket,
-    SHAPE.map((m) => Math.round(MEDIAN_BY_AGE[bracket] * m)),
-  ]),
-) as Record<AgeBracket, number[]>;
 
 export function ageToBracket(age: number): AgeBracket {
   if (age < 25) return "18-24";
@@ -93,39 +89,44 @@ export type Comparison = {
   topLabel: string; // "Top 10%"
   ageBracket: AgeBracket;
   countryName: string;
-  // The net wealth needed to reach each notable tier, for "next goal" display.
+  // The wealth needed to reach each notable tier, for "next goal" display.
   tiers: { label: string; percentile: number; value: number }[];
   median: number;
   multipleOfMedian: number; // value / median
 };
 
 /**
- * Estimate the percentile (0–100) for `value` by interpolating between anchors.
+ * Percentile (0–100) of a value on the national household wealth curve, with
+ * linear interpolation between the stored P1…P99 points.
  */
-function estimatePercentile(value: number, anchors: number[]): number {
-  // anchors aligned with PCTS = [25, 50, 75, 90, 95, 99]
-  if (value <= 0) return 0;
-
-  // Below the lowest anchor: scale linearly from 0 up to the lowest percentile.
-  if (value <= anchors[0]) {
-    return (value / anchors[0]) * PCTS[0];
+function nationalPercentile(value: number): number {
+  if (value <= NAT_CURVE[0]) {
+    // At or below P1. Scale gently toward 0 so tiny/negative wealth ranks low.
+    return value <= 0 ? 0 : (value / NAT_CURVE[0]) * 1;
   }
-
-  for (let i = 0; i < anchors.length - 1; i++) {
-    const lo = anchors[i];
-    const hi = anchors[i + 1];
+  for (let i = 0; i < NAT_CURVE.length - 1; i++) {
+    const lo = NAT_CURVE[i];
+    const hi = NAT_CURVE[i + 1];
     if (value <= hi) {
       const t = (value - lo) / (hi - lo);
-      return PCTS[i] + t * (PCTS[i + 1] - PCTS[i]);
+      // index i = P(i+1); interpolate between P(i+1) and P(i+2).
+      return i + 1 + t;
     }
   }
-
-  // Above the top anchor (p99). Approach but never quite reach 100.
-  const top = anchors[anchors.length - 1];
-  // Each additional doubling past p99 buys a fraction of the remaining gap.
+  // Above P99 (£3.67m): approach but never quite reach 100.
+  const top = NAT_CURVE[NAT_CURVE.length - 1];
   const doublings = Math.log2(value / top);
-  const extra = (1 - Math.pow(0.5, doublings)) * (99.99 - 99);
-  return Math.min(99.99, 99 + extra);
+  return Math.min(99.99, 99 + (1 - Math.pow(0.5, doublings)) * 0.99);
+}
+
+/** Wealth threshold at a percentile on the national curve (inverse of above). */
+function nationalValueAt(pct: number): number {
+  const p = Math.max(1, Math.min(99, pct));
+  const idx = Math.floor(p) - 1;
+  const frac = p - Math.floor(p);
+  const lo = NAT_CURVE[idx];
+  const hi = NAT_CURVE[Math.min(idx + 1, NAT_CURVE.length - 1)];
+  return lo + (hi - lo) * frac;
 }
 
 function topLabelFor(topPercent: number): string {
@@ -141,10 +142,12 @@ export function compareWealth(
   value: number,
   ageBracket: AgeBracket,
 ): Comparison {
-  const anchors = THRESHOLDS[ageBracket];
-  const percentile = estimatePercentile(value, anchors);
+  const median = MEDIAN_BY_AGE[ageBracket];
+  // Shift the national curve onto this age band: a value is ranked as if the
+  // band shared the national distribution shape, scaled to its own median.
+  const scale = NAT_MEDIAN / median;
+  const percentile = nationalPercentile(value * scale);
   const topPercent = Math.max(0.01, 100 - percentile);
-  const median = anchors[1]; // p50
 
   const tierDefs: { label: string; percentile: number }[] = [
     { label: "Top 25%", percentile: 75 },
@@ -155,7 +158,8 @@ export function compareWealth(
 
   const tiers = tierDefs.map((t) => ({
     ...t,
-    value: valueForPercentile(t.percentile, anchors),
+    // Convert a national-curve threshold back to this age band's scale.
+    value: Math.round(nationalValueAt(t.percentile) / scale),
   }));
 
   return {
@@ -168,12 +172,4 @@ export function compareWealth(
     median,
     multipleOfMedian: median > 0 ? value / median : 0,
   };
-}
-
-/** Inverse of estimatePercentile for the stored anchor percentiles. */
-function valueForPercentile(pct: number, anchors: number[]): number {
-  for (let i = 0; i < PCTS.length; i++) {
-    if (PCTS[i] === pct) return anchors[i];
-  }
-  return anchors[anchors.length - 1];
 }
