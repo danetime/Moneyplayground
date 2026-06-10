@@ -70,6 +70,14 @@ export default function ComparisonCard({
 
           <PercentileGauge percentile={comparison.percentile} />
 
+          {comparison.ageBracket === "18-24" && (
+            <p className="mt-3 rounded-md border border-dashed border-black/20 bg-cream px-2.5 py-1.5 text-[11px] font-semibold text-stone-500">
+              Heads up: under-25s are often counted with their parents&apos;
+              household wealth in ONS data, so this bar sits high. Treat it as a
+              loose guide.
+            </p>
+          )}
+
           <p className="mt-4 text-center text-sm font-semibold text-stone-600">
             That&apos;s{" "}
             <span className="font-black text-board-deep">

@@ -1,30 +1,31 @@
 // Wealth comparison (UK).
 //
-// Given a net-worth figure and an age bracket, work out where someone sits in the
-// UK wealth distribution ("you're in the top X%").
+// Given a net-worth figure and an age bracket (and optionally a region), work out
+// where someone sits in the UK wealth distribution ("you're in the top X%").
 //
-// DATA SOURCE: ONS Wealth and Assets Survey — "Total wealth in Great Britain,
-// April 2018 to March 2020" (the same survey behind the Guardian/IFS wealth
-// calculators). Total wealth = net property + private pension + net financial +
-// physical wealth. These are HOUSEHOLD figures.
+// DATA SOURCE: ONS Wealth and Assets Survey — "Total wealth: Wealth in Great
+// Britain", April 2020 to March 2022 (the latest round; the same survey behind
+// the Guardian/IFS wealth calculators). Total wealth = net property + private
+// pension + net financial + physical wealth.
 //
-// Everything below is REAL ONS data, taken directly from the published tables:
-//   • NAT_CURVE — the full national household total-wealth distribution, P1…P99
-//     (ONS Figure 2). P50 = £302,500; P99 = £3,668,200 ("richest 1% had more
-//     than £3.6m"); P10 = £15,400 ("least wealthy 10% had £15,400 or less").
-//   • MEDIAN_BY_AGE — real median household total wealth by age of the household
-//     reference person (ONS Figure 4).
+// This is built from the REAL published distributions, not a model:
+//   • AGE_SHARES — ONS Table 2.11 "Individuals by age, by household total wealth":
+//     the actual % of each age group falling in each wealth band. We turn those
+//     bands into a cumulative curve and read percentiles straight off it.
+//   • REGION_POINTS — ONS Table 2.8: the real 25th/50th/75th total-wealth
+//     percentile points for each GB region.
+// The only modelled part is the very top tail (above £1m, an open-ended band in
+// the source), where we extrapolate with the national curve's top-end slope.
 //
-// Per-age thresholds are produced by anchoring each band to its real ONS median,
-// then borrowing the *shape* of the real national curve — but dampened, because a
-// single age band is far less spread out than the country as a whole (see
-// WITHIN_COHORT_K below for the calibration). So every band median and the
-// national curve are exact ONS figures; only the within-band spread is modelled.
-// For entertainment, not precise personal statistics.
-//
-// NOTE: this is HOUSEHOLD total wealth (incl. home equity and pensions). For a
-// fair comparison, enter your property and pension in the Other Assets panel —
-// stocks alone will under-read.
+// IMPORTANT — what this is and isn't:
+//   • HOUSEHOLD total wealth (incl. home equity and pension pots), attributed to
+//     each individual in the household. So "top 25% = ~£490k" for 35–44 is real:
+//     about a quarter of people that age live in households worth £500k+ ONCE you
+//     count pensions and property. It feels high because pension wealth is huge
+//     and invisible. For a like-for-like read, enter your property and pension in
+//     the Other Assets panel.
+//   • The 18–24 band is skewed up because many are counted with their parents'
+//     household wealth — treat that bracket as a loose guide.
 
 export type CountryCode = "UK";
 
@@ -33,7 +34,7 @@ export const COUNTRIES: { code: CountryCode; name: string; flag: string }[] = [
 ];
 
 export const WEALTH_SOURCE =
-  "ONS Wealth & Assets Survey (Apr 2018–Mar 2020) — household total wealth, GB (incl. property & pensions)";
+  "ONS Wealth & Assets Survey (Apr 2020–Mar 2022), Tables 2.8 & 2.11 — household total wealth, GB (incl. property & pensions)";
 
 export const AGE_BRACKETS = [
   "18-24",
@@ -45,39 +46,27 @@ export const AGE_BRACKETS = [
 ] as const;
 export type AgeBracket = (typeof AGE_BRACKETS)[number];
 
-// Real national household total-wealth distribution, ONS WAS Apr 2018–Mar 2020.
-// NAT_CURVE[i] = wealth threshold at percentile (i + 1), so index 0 = P1 … 98 = P99.
-const NAT_CURVE: number[] = [
-  -1_700, 2_500, 2_800, 4_200, 6_700, 7_800, 9_100, 11_100, 14_100, 15_400,
-  17_100, 19_400, 22_200, 25_100, 27_200, 30_200, 34_200, 36_900, 40_700, 44_700,
-  48_800, 53_600, 59_900, 65_800, 71_000, 78_500, 85_600, 92_400, 99_900, 107_200,
-  113_900, 122_200, 130_800, 139_200, 146_400, 155_800, 164_900, 174_000, 183_200, 193_800,
-  203_400, 214_000, 225_200, 236_700, 246_600, 257_400, 267_700, 277_300, 291_800, 302_500,
-  313_500, 325_300, 338_600, 351_800, 366_300, 380_800, 391_900, 407_700, 421_600, 436_100,
-  450_100, 467_300, 484_400, 502_100, 519_000, 538_200, 558_400, 575_900, 597_400, 617_900,
-  641_200, 662_900, 683_600, 709_000, 733_800, 764_500, 795_800, 826_500, 856_000, 895_000,
-  934_000, 969_600, 1_013_900, 1_057_400, 1_105_900, 1_159_100, 1_210_700, 1_274_700, 1_339_400, 1_413_700,
-  1_506_300, 1_603_600, 1_709_800, 1_853_800, 1_988_500, 2_197_500, 2_469_200, 2_862_800, 3_668_200,
-];
+// Upper bound (£) of each ONS wealth band; the final band (£1m+) is open-ended.
+const BANDS = [20_000, 85_000, 200_000, 300_000, 500_000, 1_000_000];
 
-// National median (P50) — the pivot used to shift the curve onto each age band.
-const NAT_MEDIAN = 302_500;
-
-// Real median household total wealth by age of household reference person
-// (ONS Figure 4). ONS's top two bands are "55 to under State Pension age" and
-// "State Pension age and over", mapped here to 55-64 and 65+.
-const MEDIAN_BY_AGE: Record<AgeBracket, number> = {
-  "18-24": 22_300,
-  "25-34": 76_800,
-  "35-44": 198_100,
-  "45-54": 366_600,
-  "55-64": 553_400,
-  "65+": 468_700,
+// ONS Table 2.11 — Individuals by age, by household total wealth, GB,
+// April 2020 to March 2022. Each row is the % of that age group in each band:
+// [ <£20k, £20–85k, £85–200k, £200–300k, £300–500k, £500k–1m, £1m+ ].
+const AGE_SHARES: Record<AgeBracket, number[]> = {
+  "18-24": [14, 18, 11, 8, 11, 21, 16],
+  "25-34": [14, 23, 22, 10, 13, 11, 6],
+  "35-44": [10, 17, 17, 14, 18, 18, 6],
+  "45-54": [10, 14, 10, 10, 15, 25, 17],
+  "55-64": [8, 9, 8, 6, 13, 27, 29],
+  "65+": [5, 10, 9, 9, 17, 27, 22],
 };
 
-// Real median household total wealth by region, ONS WAS Apr 2018–Mar 2020
-// (Figure 5, "South East wealthiest region…"). Same survey and definition as
-// the national curve above, so the same curve-shift trick applies per region.
+// Top-tail slope (Pareto alpha) for wealth above £1m, derived from the national
+// curve's P90 (£1.41m) → P99 (£3.67m). Stable across the open-ended top band.
+const TAIL_ALPHA = 2.4;
+
+// ---- Regions ----
+
 export const REGIONS = [
   "North East",
   "North West",
@@ -93,18 +82,20 @@ export const REGIONS = [
 ] as const;
 export type Region = (typeof REGIONS)[number];
 
-const MEDIAN_BY_REGION: Record<Region, number> = {
-  "North East": 168_500,
-  "North West": 237_500,
-  "Yorkshire & the Humber": 214_900,
-  "East Midlands": 262_800,
-  "West Midlands": 262_400,
-  "East of England": 398_900,
-  London: 340_300,
-  "South East": 503_400,
-  "South West": 379_900,
-  Wales: 275_700,
-  Scotland: 214_000,
+// ONS Table 2.8 — total wealth percentile points by region, GB,
+// April 2020 to March 2022: [25th, 50th (median), 75th] in £.
+const REGION_POINTS: Record<Region, [number, number, number]> = {
+  "North East": [38_100, 179_900, 429_600],
+  "North West": [68_500, 222_400, 522_400],
+  "Yorkshire & the Humber": [58_300, 245_600, 518_700],
+  "East Midlands": [71_700, 261_000, 586_100],
+  "West Midlands": [72_300, 260_800, 587_100],
+  "East of England": [121_600, 400_700, 820_500],
+  London: [30_500, 244_800, 791_400],
+  "South East": [127_300, 489_800, 935_700],
+  "South West": [103_100, 347_700, 724_100],
+  Wales: [72_900, 266_900, 585_100],
+  Scotland: [57_500, 239_500, 546_100],
 };
 
 export function isRegion(value: string): value is Region {
@@ -120,50 +111,74 @@ export function ageToBracket(age: number): AgeBracket {
   return "65+";
 }
 
-export type Comparison = {
-  percentile: number; // 0–100, your rank (higher = richer)
-  topPercent: number; // e.g. 10 means "top 10%"
-  topLabel: string; // "Top 10%"
-  ageBracket: AgeBracket;
-  countryName: string;
-  // The wealth needed to reach each notable tier, for "next goal" display.
-  tiers: { label: string; percentile: number; value: number }[];
-  median: number;
-  multipleOfMedian: number; // value / median
-};
+// ---- Distribution interpolation ----
 
-/**
- * Percentile (0–100) of a value on the national household wealth curve, with
- * linear interpolation between the stored P1…P99 points.
- */
-function nationalPercentile(value: number): number {
-  if (value <= NAT_CURVE[0]) {
-    // At or below P1. Scale gently toward 0 so tiny/negative wealth ranks low.
-    return value <= 0 ? 0 : (value / NAT_CURVE[0]) * 1;
+// An anchor is a known (percentile, wealth) point on a distribution curve.
+type Anchor = { p: number; v: number };
+
+// Build the cumulative percentile curve for an age band from its band shares.
+function ageAnchors(bracket: AgeBracket): Anchor[] {
+  const shares = AGE_SHARES[bracket];
+  const total = shares.reduce((a, b) => a + b, 0);
+  const anchors: Anchor[] = [];
+  let cum = 0;
+  for (let i = 0; i < BANDS.length; i++) {
+    cum += (shares[i] * 100) / total;
+    anchors.push({ p: cum, v: BANDS[i] });
   }
-  for (let i = 0; i < NAT_CURVE.length - 1; i++) {
-    const lo = NAT_CURVE[i];
-    const hi = NAT_CURVE[i + 1];
-    if (value <= hi) {
-      const t = (value - lo) / (hi - lo);
-      // index i = P(i+1); interpolate between P(i+1) and P(i+2).
-      return i + 1 + t;
-    }
-  }
-  // Above P99 (£3.67m): approach but never quite reach 100.
-  const top = NAT_CURVE[NAT_CURVE.length - 1];
-  const doublings = Math.log2(value / top);
-  return Math.min(99.99, 99 + (1 - Math.pow(0.5, doublings)) * 0.99);
+  return anchors; // last anchor is at £1m; everything above is the tail
 }
 
-/** Wealth threshold at a percentile on the national curve (inverse of above). */
-function nationalValueAt(pct: number): number {
-  const p = Math.max(1, Math.min(99, pct));
-  const idx = Math.floor(p) - 1;
-  const frac = p - Math.floor(p);
-  const lo = NAT_CURVE[idx];
-  const hi = NAT_CURVE[Math.min(idx + 1, NAT_CURVE.length - 1)];
-  return lo + (hi - lo) * frac;
+function regionAnchors(region: Region): Anchor[] {
+  const [v25, v50, v75] = REGION_POINTS[region];
+  return [
+    { p: 25, v: v25 },
+    { p: 50, v: v50 },
+    { p: 75, v: v75 },
+  ];
+}
+
+// Percentile (0–100) of a wealth value on a curve defined by `anchors`, using
+// log-linear interpolation between anchors and a Pareto tail above the top one.
+function percentileFor(value: number, anchors: Anchor[]): number {
+  if (value <= 0) return 0;
+  const first = anchors[0];
+  const last = anchors[anchors.length - 1];
+
+  if (value <= first.v) return (value / first.v) * first.p;
+
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const a = anchors[i];
+    const b = anchors[i + 1];
+    if (value <= b.v) {
+      const t = Math.log(value / a.v) / Math.log(b.v / a.v);
+      return a.p + t * (b.p - a.p);
+    }
+  }
+
+  // Above the top anchor: exceedance shrinks with the tail slope.
+  const exceedance = (100 - last.p) * Math.pow(value / last.v, -TAIL_ALPHA);
+  return Math.min(99.99, 100 - exceedance);
+}
+
+// Wealth value at percentile `p` — the inverse of percentileFor.
+function valueForPercentile(p: number, anchors: Anchor[]): number {
+  const first = anchors[0];
+  const last = anchors[anchors.length - 1];
+
+  if (p <= first.p) return first.v * (p / first.p);
+
+  for (let i = 0; i < anchors.length - 1; i++) {
+    const a = anchors[i];
+    const b = anchors[i + 1];
+    if (p <= b.p) {
+      const t = (p - a.p) / (b.p - a.p);
+      return a.v * Math.pow(b.v / a.v, t);
+    }
+  }
+
+  const exceedance = 100 - p;
+  return last.v * Math.pow(exceedance / (100 - last.p), -1 / TAIL_ALPHA);
 }
 
 function topLabelFor(topPercent: number): string {
@@ -175,35 +190,49 @@ function topLabelFor(topPercent: number): string {
   return `Bottom ${Math.round(100 - topPercent)}%`;
 }
 
-// Within-cohort compression.
-//
-// Stretching the *whole* national curve onto a band's median over-states how
-// spread out that band is, because the national curve also contains the gap
-// *between* young and old. Sanity check: uncompressed, the wealthiest band
-// (55–64, median £553k) gets a P90 of ~£2.6m — nearly double the national P90
-// of £1.41m, which is impossible when that band dominates the very top.
-//
-// So we pull each band's percentiles toward its own median by factor K. K≈0.45
-// is the value that makes the wealthiest band's P90 reconcile with the national
-// P90 (£1.41m). The band medians stay exact; only the spread is dampened. Still
-// modelled, but now calibrated against a real constraint rather than assuming a
-// single cohort is as unequal as the whole country.
-const WITHIN_COHORT_K = 0.45;
+// ---- Public comparison API ----
 
-/** Percentile of `value` within a cohort whose real median is `median`. */
-function percentileWithin(value: number, median: number): number {
-  if (value <= 0 || median <= 0) return 0;
-  // Map the value to its equivalent point on the national curve, dampening the
-  // distance from the median, then read the national percentile.
-  const equivalentNational =
-    NAT_MEDIAN * (1 + (value / median - 1) / WITHIN_COHORT_K);
-  return nationalPercentile(equivalentNational);
-}
+export type Comparison = {
+  percentile: number; // 0–100, your rank (higher = richer)
+  topPercent: number; // e.g. 10 means "top 10%"
+  topLabel: string; // "Top 10%"
+  ageBracket: AgeBracket;
+  countryName: string;
+  tiers: { label: string; percentile: number; value: number }[];
+  median: number;
+  multipleOfMedian: number; // value / median
+};
 
-/** Inverse: the cohort wealth at national-curve percentile `pct`. */
-function valueWithinAt(pct: number, median: number): number {
-  const nat = nationalValueAt(pct);
-  return Math.round(median * (1 + (nat / NAT_MEDIAN - 1) * WITHIN_COHORT_K));
+export function compareWealth(
+  value: number,
+  ageBracket: AgeBracket,
+): Comparison {
+  const anchors = ageAnchors(ageBracket);
+  const percentile = percentileFor(value, anchors);
+  const topPercent = Math.max(0.01, 100 - percentile);
+  const median = valueForPercentile(50, anchors);
+
+  const tierDefs: { label: string; percentile: number }[] = [
+    { label: "Top 25%", percentile: 75 },
+    { label: "Top 10%", percentile: 90 },
+    { label: "Top 5%", percentile: 95 },
+    { label: "Top 1%", percentile: 99 },
+  ];
+  const tiers = tierDefs.map((t) => ({
+    ...t,
+    value: Math.round(valueForPercentile(t.percentile, anchors)),
+  }));
+
+  return {
+    percentile,
+    topPercent,
+    topLabel: topLabelFor(topPercent),
+    ageBracket,
+    countryName: "the UK",
+    tiers,
+    median,
+    multipleOfMedian: median > 0 ? value / median : 0,
+  };
 }
 
 export type RegionComparison = {
@@ -215,51 +244,19 @@ export type RegionComparison = {
   multipleOfMedian: number;
 };
 
-/** Rank a net worth within a GB region (same approach as the age comparison). */
 export function compareWealthByRegion(
   value: number,
   region: Region,
 ): RegionComparison {
-  const median = MEDIAN_BY_REGION[region];
-  const percentile = percentileWithin(value, median);
+  const anchors = regionAnchors(region);
+  const percentile = percentileFor(value, anchors);
   const topPercent = Math.max(0.01, 100 - percentile);
+  const median = REGION_POINTS[region][1];
   return {
     region,
     percentile,
     topPercent,
     topLabel: topLabelFor(topPercent),
-    median,
-    multipleOfMedian: median > 0 ? value / median : 0,
-  };
-}
-
-export function compareWealth(
-  value: number,
-  ageBracket: AgeBracket,
-): Comparison {
-  const median = MEDIAN_BY_AGE[ageBracket];
-  const percentile = percentileWithin(value, median);
-  const topPercent = Math.max(0.01, 100 - percentile);
-
-  const tierDefs: { label: string; percentile: number }[] = [
-    { label: "Top 25%", percentile: 75 },
-    { label: "Top 10%", percentile: 90 },
-    { label: "Top 5%", percentile: 95 },
-    { label: "Top 1%", percentile: 99 },
-  ];
-
-  const tiers = tierDefs.map((t) => ({
-    ...t,
-    value: valueWithinAt(t.percentile, median),
-  }));
-
-  return {
-    percentile,
-    topPercent,
-    topLabel: topLabelFor(topPercent),
-    ageBracket,
-    countryName: "the UK",
-    tiers,
     median,
     multipleOfMedian: median > 0 ? value / median : 0,
   };
